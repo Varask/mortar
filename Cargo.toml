@@ -1,0 +1,13 @@
+[package]
+name = "mortar"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rustyline = "14.0"
+csv = "1"
+serde = { version = "1", features = ["derive"] }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+splines = "4"
+plotters = "0.3"
