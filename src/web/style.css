@@ -161,6 +161,31 @@ main {
     color: var(--khaki-light);
 }
 
+.item-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ammo-select, .type-select {
+    padding: 4px 6px;
+    border: 1px solid var(--khaki);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    background: var(--white);
+    cursor: pointer;
+}
+
+.ammo-badge, .type-badge {
+    font-weight: 400;
+    color: var(--olive);
+}
+
+.position-list li.selected .ammo-badge,
+.position-list li.selected .type-badge {
+    color: var(--khaki-light);
+}
+
 .btn-delete {
     background: var(--red);
     color: var(--white);
@@ -175,6 +200,20 @@ main {
 
 .btn-delete:hover {
     opacity: 1;
+}
+
+.highlighted-row {
+    background: var(--olive-light) !important;
+    color: var(--white);
+}
+
+.highlighted-row td {
+    color: var(--white);
+}
+
+.highlighted-row td:first-child {
+    color: var(--white);
+    font-weight: 700;
 }
 
 /* Form Group */
@@ -377,6 +416,120 @@ main {
 .solution-header .arrow {
     margin: 0 15px;
     color: var(--olive);
+}
+
+/* Type info badges */
+.type-info {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.type-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.type-label {
+    font-size: 0.85rem;
+    color: var(--olive-dark);
+}
+
+.badge {
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.badge-ammo {
+    background: var(--olive);
+    color: var(--white);
+}
+
+.badge-target {
+    background: var(--blue);
+    color: var(--white);
+}
+
+.badge-recommended {
+    background: var(--green);
+    color: var(--white);
+}
+
+/* Selected solution cards */
+.selected-solution {
+    background: var(--olive-dark);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.selected-solution h3 {
+    color: var(--sand);
+    margin: 0 0 12px 0;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.elevation-cards {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.elevation-card {
+    background: var(--white);
+    border-radius: 6px;
+    padding: 10px 15px;
+    text-align: center;
+    min-width: 70px;
+}
+
+.elevation-card .ring {
+    font-size: 0.75rem;
+    color: var(--olive);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.elevation-card .value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--olive-dark);
+    font-family: 'Courier New', monospace;
+}
+
+.elevation-card .value.na {
+    color: #999;
+    font-size: 1rem;
+}
+
+/* All solutions details */
+.all-solutions {
+    margin-top: 15px;
+}
+
+.all-solutions summary {
+    cursor: pointer;
+    padding: 10px;
+    background: var(--khaki-light);
+    border-radius: 5px;
+    font-weight: 600;
+    color: var(--olive-dark);
+}
+
+.all-solutions summary:hover {
+    background: var(--khaki);
+}
+
+.all-solutions[open] summary {
+    margin-bottom: 10px;
 }
 
 .metrics {

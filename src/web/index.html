@@ -45,6 +45,15 @@
                             <label for="mortar-y">Y (m)</label>
                             <input type="number" id="mortar-y" value="0" step="1">
                         </div>
+                        <div class="form-row">
+                            <label for="mortar-ammo">Ogive</label>
+                            <select id="mortar-ammo">
+                                <option value="HE" selected>HE</option>
+                                <option value="PRACTICE">PRACTICE</option>
+                                <option value="SMOKE">SMOKE</option>
+                                <option value="FLARE">FLARE</option>
+                            </select>
+                        </div>
                         <button id="add-mortar-btn" class="btn btn-add">Ajouter</button>
                     </div>
                 </div>
@@ -78,6 +87,14 @@
                         <div class="form-row">
                             <label for="target-y">Y (m)</label>
                             <input type="number" id="target-y" value="0" step="1">
+                        </div>
+                        <div class="form-row">
+                            <label for="target-type">Type</label>
+                            <select id="target-type">
+                                <option value="INFANTERIE" selected>Infanterie</option>
+                                <option value="VEHICULE">Vehicule</option>
+                                <option value="SOUTIEN">Soutien</option>
+                            </select>
                         </div>
                         <button id="add-target-btn" class="btn btn-add">Ajouter</button>
                     </div>
@@ -132,30 +149,54 @@
                     </div>
                 </div>
 
-                <h3>Elevation (mil) par Type de Munition</h3>
-                <div class="table-container">
-                    <table id="solutions-table">
-                        <thead>
-                            <tr>
-                                <th>Type</th>
-                                <th>0R</th>
-                                <th>1R</th>
-                                <th>2R</th>
-                                <th>3R</th>
-                                <th>4R</th>
-                            </tr>
-                        </thead>
-                        <tbody id="solutions-body">
-                        </tbody>
-                    </table>
+                <div class="type-info">
+                    <div class="type-item">
+                        <span class="type-label">Ogive:</span>
+                        <span id="mortar-ammo-display" class="type-value badge badge-ammo">--</span>
+                    </div>
+                    <div class="type-item">
+                        <span class="type-label">Type cible:</span>
+                        <span id="target-type-display" class="type-value badge badge-target">--</span>
+                    </div>
+                    <div class="type-item">
+                        <span class="type-label">Ogive suggeree:</span>
+                        <span id="recommended-ammo" class="type-value badge badge-recommended">--</span>
+                    </div>
                 </div>
+
+                <!-- Selected Solution (highlighted) -->
+                <div id="selected-solution" class="selected-solution">
+                    <h3>Elevation <span id="selected-ammo-type">--</span></h3>
+                    <div class="elevation-cards" id="elevation-cards">
+                    </div>
+                </div>
+
+                <details class="all-solutions">
+                    <summary>Voir toutes les elevations</summary>
+                    <div class="table-container">
+                        <table id="solutions-table">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>0R</th>
+                                    <th>1R</th>
+                                    <th>2R</th>
+                                    <th>3R</th>
+                                    <th>4R</th>
+                                </tr>
+                            </thead>
+                            <tbody id="solutions-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
             </div>
 
             <div id="error" class="error hidden"></div>
         </main>
 
         <footer>
-            <p>Mortar Calculator v0.1.0</p>
+            <p>Mortar Calculator v0.1.0 | CLI: tapez 'help' dans le terminal</p>
         </footer>
     </div>
 

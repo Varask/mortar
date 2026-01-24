@@ -5,6 +5,94 @@ use std::fs::File;
 use std::path::Path;
 
 // =====================
+// Enums
+// =====================
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum AmmoKind {
+    Practice,
+    He,
+    Smoke,
+    Flare,
+}
+
+impl AmmoKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            AmmoKind::Practice => "PRACTICE",
+            AmmoKind::He => "HE",
+            AmmoKind::Smoke => "SMOKE",
+            AmmoKind::Flare => "FLARE",
+        }
+    }
+
+    pub fn all() -> &'static [AmmoKind] {
+        &[AmmoKind::Practice, AmmoKind::He, AmmoKind::Smoke, AmmoKind::Flare]
+    }
+
+    pub fn from_str(s: &str) -> Option<AmmoKind> {
+        match s.to_uppercase().as_str() {
+            "PRACTICE" => Some(AmmoKind::Practice),
+            "HE" => Some(AmmoKind::He),
+            "SMOKE" => Some(AmmoKind::Smoke),
+            "FLARE" => Some(AmmoKind::Flare),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for AmmoKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum TargetType {
+    #[default]
+    Infanterie,
+    Vehicule,
+    Soutien,
+}
+
+impl TargetType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TargetType::Infanterie => "INFANTERIE",
+            TargetType::Vehicule => "VEHICULE",
+            TargetType::Soutien => "SOUTIEN",
+        }
+    }
+
+    pub fn all() -> &'static [TargetType] {
+        &[TargetType::Infanterie, TargetType::Vehicule, TargetType::Soutien]
+    }
+
+    pub fn from_str(s: &str) -> Option<TargetType> {
+        match s.to_uppercase().as_str() {
+            "INFANTERIE" | "INF" => Some(TargetType::Infanterie),
+            "VEHICULE" | "VEH" => Some(TargetType::Vehicule),
+            "SOUTIEN" | "SOU" => Some(TargetType::Soutien),
+            _ => None,
+        }
+    }
+
+    /// Suggested ammo for this target type
+    pub fn suggested_ammo(&self) -> AmmoKind {
+        match self {
+            TargetType::Infanterie => AmmoKind::He,
+            TargetType::Vehicule => AmmoKind::He,
+            TargetType::Soutien => AmmoKind::Smoke,
+        }
+    }
+}
+
+impl std::fmt::Display for TargetType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+// =====================
 // Geometry structs
 // =====================
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -38,6 +126,44 @@ impl Position {
             azimuth += 360.0;
         }
         azimuth
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MortarPosition {
+    pub name: String,
+    pub elevation: f64,
+    pub x: f64,
+    pub y: f64,
+    pub ammo_type: AmmoKind,
+}
+
+impl MortarPosition {
+    pub fn new(name: String, elevation: f64, x: f64, y: f64, ammo_type: AmmoKind) -> Self {
+        MortarPosition { name, elevation, x, y, ammo_type }
+    }
+
+    pub fn as_position(&self) -> Position {
+        Position::new(self.name.clone(), self.elevation, self.x, self.y)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TargetPosition {
+    pub name: String,
+    pub elevation: f64,
+    pub x: f64,
+    pub y: f64,
+    pub target_type: TargetType,
+}
+
+impl TargetPosition {
+    pub fn new(name: String, elevation: f64, x: f64, y: f64, target_type: TargetType) -> Self {
+        TargetPosition { name, elevation, x, y, target_type }
+    }
+
+    pub fn as_position(&self) -> Position {
+        Position::new(self.name.clone(), self.elevation, self.x, self.y)
     }
 }
 
@@ -112,29 +238,6 @@ impl BallisticTable {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum AmmoKind {
-    Practice,
-    He,
-    Smoke,
-    Flare,
-}
-
-impl AmmoKind {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            AmmoKind::Practice => "PRACTICE",
-            AmmoKind::He => "HE",
-            AmmoKind::Smoke => "SMOKE",
-            AmmoKind::Flare => "FLARE",
-        }
-    }
-
-    pub fn all() -> &'static [AmmoKind] {
-        &[AmmoKind::Practice, AmmoKind::He, AmmoKind::Smoke, AmmoKind::Flare]
-    }
-}
-
 pub type Ring = u8;
 
 pub fn load_ballistics() -> Result<BTreeMap<(AmmoKind, Ring), BallisticTable>> {
@@ -188,17 +291,30 @@ pub struct FiringSolution {
     pub distance_m: f64,
     pub azimuth_deg: f64,
     pub elevation_diff_m: f64,
+    pub mortar_ammo: String,
+    pub target_type: String,
+    pub recommended_ammo: String,
     pub solutions: BTreeMap<String, BTreeMap<String, Option<f64>>>,
+    pub selected_solution: Option<SelectedSolution>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SelectedSolution {
+    pub ammo_type: String,
+    pub elevations: BTreeMap<String, Option<f64>>,
 }
 
 pub fn calculate_solution(
-    mortar: &Position,
-    target: &Position,
+    mortar: &MortarPosition,
+    target: &TargetPosition,
     ballistics: &BTreeMap<(AmmoKind, Ring), BallisticTable>,
 ) -> FiringSolution {
-    let distance_m = mortar.distance_to(target);
-    let azimuth_deg = mortar.azimuth_to(target);
-    let elevation_diff_m = mortar.elevation_difference(target);
+    let mortar_pos = mortar.as_position();
+    let target_pos = target.as_position();
+
+    let distance_m = mortar_pos.distance_to(&target_pos);
+    let azimuth_deg = mortar_pos.azimuth_to(&target_pos);
+    let elevation_diff_m = mortar_pos.elevation_difference(&target_pos);
 
     let rings: &[u8] = &[0, 1, 2, 3, 4];
     let kinds = AmmoKind::all();
@@ -215,10 +331,51 @@ pub fn calculate_solution(
         solutions.insert(kind.as_str().to_string(), ring_solutions);
     }
 
+    // Selected solution based on mortar's ammo type
+    let selected_ammo = mortar.ammo_type;
+    let mut selected_elevations: BTreeMap<String, Option<f64>> = BTreeMap::new();
+    for r in rings {
+        let key = format!("{}R", r);
+        let elev = ballistics.get(&(selected_ammo, *r)).and_then(|t| t.elev_at(distance_m));
+        selected_elevations.insert(key, elev);
+    }
+
+    let selected_solution = Some(SelectedSolution {
+        ammo_type: selected_ammo.as_str().to_string(),
+        elevations: selected_elevations,
+    });
+
     FiringSolution {
         distance_m,
         azimuth_deg,
         elevation_diff_m,
+        mortar_ammo: mortar.ammo_type.as_str().to_string(),
+        target_type: target.target_type.as_str().to_string(),
+        recommended_ammo: target.target_type.suggested_ammo().as_str().to_string(),
         solutions,
+        selected_solution,
     }
+}
+
+// Legacy function for backward compatibility
+pub fn calculate_solution_simple(
+    mortar: &Position,
+    target: &Position,
+    ballistics: &BTreeMap<(AmmoKind, Ring), BallisticTable>,
+) -> FiringSolution {
+    let mortar_pos = MortarPosition::new(
+        mortar.name.clone(),
+        mortar.elevation,
+        mortar.x,
+        mortar.y,
+        AmmoKind::He,
+    );
+    let target_pos = TargetPosition::new(
+        target.name.clone(),
+        target.elevation,
+        target.x,
+        target.y,
+        TargetType::Infanterie,
+    );
+    calculate_solution(&mortar_pos, &target_pos, ballistics)
 }

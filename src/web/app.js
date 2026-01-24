@@ -71,6 +71,7 @@ async function addMortar() {
     const elevation = parseFloat(document.getElementById('mortar-elevation').value) || 0;
     const x = parseFloat(document.getElementById('mortar-x').value) || 0;
     const y = parseFloat(document.getElementById('mortar-y').value) || 0;
+    const ammo_type = document.getElementById('mortar-ammo').value;
 
     if (!name) {
         showToast('Le nom du mortier est requis', 'error');
@@ -81,13 +82,13 @@ async function addMortar() {
         const response = await fetch('/api/mortars', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, elevation, x, y })
+            body: JSON.stringify({ name, elevation, x, y, ammo_type })
         });
 
         const data = await response.json();
 
         if (response.ok) {
-            showToast(`Mortier '${name}' ajoute`, 'success');
+            showToast(`Mortier '${name}' ajoute [${ammo_type}]`, 'success');
             document.getElementById('mortar-name').value = '';
             document.getElementById('mortar-elevation').value = '0';
             document.getElementById('mortar-x').value = '0';
@@ -122,11 +123,29 @@ async function deleteMortar(name) {
     }
 }
 
+async function updateMortarAmmo(name, ammo_type) {
+    try {
+        const response = await fetch('/api/mortars/ammo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, ammo_type })
+        });
+
+        if (response.ok) {
+            showToast(`Ogive ${name} -> ${ammo_type}`, 'success');
+            loadMortars();
+        }
+    } catch (error) {
+        showToast('Erreur de connexion', 'error');
+    }
+}
+
 async function addTarget() {
     const name = document.getElementById('target-name').value.trim();
     const elevation = parseFloat(document.getElementById('target-elevation').value) || 0;
     const x = parseFloat(document.getElementById('target-x').value) || 0;
     const y = parseFloat(document.getElementById('target-y').value) || 0;
+    const target_type = document.getElementById('target-type').value;
 
     if (!name) {
         showToast('Le nom de la cible est requis', 'error');
@@ -137,13 +156,13 @@ async function addTarget() {
         const response = await fetch('/api/targets', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, elevation, x, y })
+            body: JSON.stringify({ name, elevation, x, y, target_type })
         });
 
         const data = await response.json();
 
         if (response.ok) {
-            showToast(`Cible '${name}' ajoutee`, 'success');
+            showToast(`Cible '${name}' ajoutee [${target_type}]`, 'success');
             document.getElementById('target-name').value = '';
             document.getElementById('target-elevation').value = '0';
             document.getElementById('target-x').value = '0';
@@ -178,6 +197,23 @@ async function deleteTarget(name) {
     }
 }
 
+async function updateTargetType(name, target_type) {
+    try {
+        const response = await fetch('/api/targets/type', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, target_type })
+        });
+
+        if (response.ok) {
+            showToast(`Type ${name} -> ${target_type}`, 'success');
+            loadTargets();
+        }
+    } catch (error) {
+        showToast('Erreur de connexion', 'error');
+    }
+}
+
 async function calculate() {
     const btn = document.getElementById('calculate-btn');
     const resultsSection = document.getElementById('results');
@@ -197,7 +233,7 @@ async function calculate() {
     btn.disabled = true;
 
     try {
-        const response = await fetch('/api/calculate-by-name', {
+        const response = await fetch('/api/calculate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -238,10 +274,18 @@ function renderMortarsList() {
         li.className = selectedMortar === mortar.name ? 'selected' : '';
         li.innerHTML = `
             <div class="position-info" data-name="${mortar.name}">
-                <span class="position-name">${mortar.name}</span>
+                <span class="position-name">${mortar.name} <small class="ammo-badge">[${mortar.ammo_type}]</small></span>
                 <span class="position-coords">X:${mortar.x} Y:${mortar.y} E:${mortar.elevation}m</span>
             </div>
-            <button class="btn-delete" data-name="${mortar.name}">X</button>
+            <div class="item-actions">
+                <select class="ammo-select" data-name="${mortar.name}">
+                    <option value="HE" ${mortar.ammo_type === 'He' ? 'selected' : ''}>HE</option>
+                    <option value="PRACTICE" ${mortar.ammo_type === 'Practice' ? 'selected' : ''}>PRACTICE</option>
+                    <option value="SMOKE" ${mortar.ammo_type === 'Smoke' ? 'selected' : ''}>SMOKE</option>
+                    <option value="FLARE" ${mortar.ammo_type === 'Flare' ? 'selected' : ''}>FLARE</option>
+                </select>
+                <button class="btn-delete" data-name="${mortar.name}">X</button>
+            </div>
         `;
 
         // Click on item to select
@@ -249,6 +293,12 @@ function renderMortarsList() {
             selectedMortar = mortar.name;
             document.getElementById('selected-mortar').value = mortar.name;
             renderMortarsList();
+        });
+
+        // Ammo type change
+        li.querySelector('.ammo-select').addEventListener('change', (e) => {
+            e.stopPropagation();
+            updateMortarAmmo(mortar.name, e.target.value);
         });
 
         // Delete button
@@ -275,10 +325,17 @@ function renderTargetsList() {
         li.className = selectedTarget === target.name ? 'selected' : '';
         li.innerHTML = `
             <div class="position-info" data-name="${target.name}">
-                <span class="position-name">${target.name}</span>
+                <span class="position-name">${target.name} <small class="type-badge">[${target.target_type}]</small></span>
                 <span class="position-coords">X:${target.x} Y:${target.y} E:${target.elevation}m</span>
             </div>
-            <button class="btn-delete" data-name="${target.name}">X</button>
+            <div class="item-actions">
+                <select class="type-select" data-name="${target.name}">
+                    <option value="INFANTERIE" ${target.target_type === 'Infanterie' ? 'selected' : ''}>INF</option>
+                    <option value="VEHICULE" ${target.target_type === 'Vehicule' ? 'selected' : ''}>VEH</option>
+                    <option value="SOUTIEN" ${target.target_type === 'Soutien' ? 'selected' : ''}>SOU</option>
+                </select>
+                <button class="btn-delete" data-name="${target.name}">X</button>
+            </div>
         `;
 
         // Click on item to select
@@ -286,6 +343,12 @@ function renderTargetsList() {
             selectedTarget = target.name;
             document.getElementById('selected-target').value = target.name;
             renderTargetsList();
+        });
+
+        // Target type change
+        li.querySelector('.type-select').addEventListener('change', (e) => {
+            e.stopPropagation();
+            updateTargetType(target.name, e.target.value);
         });
 
         // Delete button
@@ -306,11 +369,10 @@ function updateMortarsDropdown() {
     for (const mortar of mortars) {
         const option = document.createElement('option');
         option.value = mortar.name;
-        option.textContent = `${mortar.name} (${mortar.x}, ${mortar.y})`;
+        option.textContent = `${mortar.name} [${mortar.ammo_type}]`;
         select.appendChild(option);
     }
 
-    // Restore selection if still valid
     if (currentValue && mortars.some(m => m.name === currentValue)) {
         select.value = currentValue;
     } else {
@@ -326,11 +388,10 @@ function updateTargetsDropdown() {
     for (const target of targets) {
         const option = document.createElement('option');
         option.value = target.name;
-        option.textContent = `${target.name} (${target.x}, ${target.y})`;
+        option.textContent = `${target.name} [${target.target_type}]`;
         select.appendChild(option);
     }
 
-    // Restore selection if still valid
     if (currentValue && targets.some(t => t.name === currentValue)) {
         select.value = currentValue;
     } else {
@@ -358,7 +419,31 @@ function displayResults(data, mortarName, targetName) {
     document.getElementById('azimuth').textContent = data.azimuth_deg.toFixed(1);
     document.getElementById('elevation-diff').textContent = data.elevation_diff_m.toFixed(1);
 
-    // Build solutions table
+    // Update type info
+    document.getElementById('mortar-ammo-display').textContent = data.mortar_ammo;
+    document.getElementById('target-type-display').textContent = data.target_type;
+    document.getElementById('recommended-ammo').textContent = data.recommended_ammo;
+
+    // Update selected solution cards
+    if (data.selected_solution) {
+        document.getElementById('selected-ammo-type').textContent = data.selected_solution.ammo_type;
+        const cardsContainer = document.getElementById('elevation-cards');
+        cardsContainer.innerHTML = '';
+
+        const rings = ['0R', '1R', '2R', '3R', '4R'];
+        for (const ring of rings) {
+            const value = data.selected_solution.elevations[ring];
+            const card = document.createElement('div');
+            card.className = 'elevation-card';
+            card.innerHTML = `
+                <div class="ring">${ring}</div>
+                <div class="value ${value === null ? 'na' : ''}">${value !== null ? value.toFixed(1) : 'N/A'}</div>
+            `;
+            cardsContainer.appendChild(card);
+        }
+    }
+
+    // Build all solutions table
     const tbody = document.getElementById('solutions-body');
     tbody.innerHTML = '';
 
@@ -367,13 +452,14 @@ function displayResults(data, mortarName, targetName) {
 
     for (const ammoType of ammoTypes) {
         const row = document.createElement('tr');
+        if (ammoType === data.mortar_ammo) {
+            row.classList.add('highlighted-row');
+        }
 
-        // Ammo type cell
         const typeCell = document.createElement('td');
         typeCell.textContent = ammoType;
         row.appendChild(typeCell);
 
-        // Ring cells
         const ammoSolutions = data.solutions[ammoType] || {};
         for (const ring of rings) {
             const cell = document.createElement('td');
@@ -402,7 +488,6 @@ function showError(message) {
 }
 
 function showToast(message, type = 'success') {
-    // Remove existing toasts
     document.querySelectorAll('.toast').forEach(t => t.remove());
 
     const toast = document.createElement('div');
