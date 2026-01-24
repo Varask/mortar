@@ -3,11 +3,9 @@ use rustyline::hint::Hinter;
 use rustyline::highlight::Highlighter;
 use rustyline::validate::Validator;
 
-use anyhow::Result;
-use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::fs::File;
-use std::path::{Path, PathBuf};
+
+use mortar::{AmmoKind, BallisticTable, Position, Ring, load_ballistics};
 
 // =====================
 // Autocomplete helper
@@ -68,41 +66,8 @@ fn clear_screen() {
 }
 
 // =====================
-// Geometry structs
+// Mortar state
 // =====================
-struct Position {
-    name: String,
-    elevation: f64,
-    x: f64,
-    y: f64,
-}
-
-impl Position {
-    fn new(name: String, elevation: f64, x: f64, y: f64) -> Self {
-        Position { name, elevation, x, y }
-    }
-
-    fn distance_to(&self, other: &Position) -> f64 {
-        let dx = self.x - other.x;
-        let dy = self.y - other.y;
-        (dx * dx + dy * dy).sqrt()
-    }
-
-    fn elevation_difference(&self, other: &Position) -> f64 {
-        (self.elevation - other.elevation).abs()
-    }
-
-    fn azumuth_to(&self, other: &Position) -> f64 {
-        let dy = other.y - self.y;
-        let dx = other.x - self.x;
-        let mut azimuth = dx.atan2(dy).to_degrees();
-        if azimuth < 0.0 {
-            azimuth += 360.0;
-        }
-        azimuth
-    }
-}
-
 struct Mortars {
     mortar_pos: Vec<Position>,
     target_pos: Vec<Position>,
@@ -122,145 +87,9 @@ impl Mortars {
     }
 }
 
-// =====================
-// Ballistics
-// =====================
-#[derive(Clone, Debug)]
-struct BallisticPoint {
-    range_m: f64,
-    elev_mil: f64,
-}
-
-#[derive(Clone, Debug)]
-struct BallisticTable {
-    points: Vec<BallisticPoint>, // triés par range
-}
-
-impl BallisticTable {
-    fn from_csv<P: AsRef<Path>>(path: P) -> Result<Self> {
-        #[derive(Deserialize)]
-        struct Row {
-            range_m: f64,
-            elev_mil: f64,
-        }
-
-        let f = File::open(&path)?;
-        let mut rdr = csv::Reader::from_reader(f);
-
-        let mut pts: Vec<BallisticPoint> = Vec::new();
-        for rec in rdr.deserialize::<Row>() {
-            let r = rec?;
-            if r.range_m.is_finite() && r.elev_mil.is_finite() {
-                pts.push(BallisticPoint { range_m: r.range_m, elev_mil: r.elev_mil });
-            }
-        }
-
-        pts.sort_by(|a, b| a.range_m.partial_cmp(&b.range_m).unwrap());
-        Ok(Self { points: pts })
-    }
-
-    fn range_bounds(&self) -> Option<(f64, f64)> {
-        let first = self.points.first()?.range_m;
-        let last = self.points.last()?.range_m;
-        Some((first, last))
-    }
-
-    // interpolation linéaire (stable). Retourne None si hors plage.
-    fn elev_at(&self, range_m: f64) -> Option<f64> {
-        if self.points.len() < 2 {
-            return None;
-        }
-        let (minr, maxr) = self.range_bounds()?;
-        if range_m < minr || range_m > maxr {
-            return None;
-        }
-
-        // exact match
-        if let Ok(i) = self.points.binary_search_by(|p| p.range_m.partial_cmp(&range_m).unwrap()) {
-            return Some(self.points[i].elev_mil);
-        }
-
-        // find segment
-        let idx = match self.points.binary_search_by(|p| p.range_m.partial_cmp(&range_m).unwrap()) {
-            Ok(i) => i,
-            Err(ins) => ins.saturating_sub(1),
-        };
-        if idx + 1 >= self.points.len() {
-            return Some(self.points.last()?.elev_mil);
-        }
-
-        let p0 = &self.points[idx];
-        let p1 = &self.points[idx + 1];
-        let t = (range_m - p0.range_m) / (p1.range_m - p0.range_m);
-        Some(p0.elev_mil + t * (p1.elev_mil - p0.elev_mil))
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum AmmoKind {
-    Practice,
-    He,
-    Smoke,
-    Flare,
-}
-
-impl AmmoKind {
-    fn as_str(&self) -> &'static str {
-        match self {
-            AmmoKind::Practice => "PRACTICE",
-            AmmoKind::He => "HE",
-            AmmoKind::Smoke => "SMOKE",
-            AmmoKind::Flare => "FLARE",
-        }
-    }
-}
-
-type Ring = u8;
-
-fn load_ballistics() -> Result<BTreeMap<(AmmoKind, Ring), BallisticTable>> {
-    let mut m: BTreeMap<(AmmoKind, Ring), BallisticTable> = BTreeMap::new();
-
-    // Adapte les chemins si besoin:
-    // data/HE/M821_HE_4R.csv etc.
-
-    // PRACTICE (0..4)
-    for r in 0..=4u8 {
-        let p = format!("data/PRACTICE/M879_PRACTICE_{}R.csv", r);
-        if let Ok(t) = BallisticTable::from_csv(&p) {
-            m.insert((AmmoKind::Practice, r), t);
-        }
-    }
-
-    // HE (0..4)
-    for r in 0..=4u8 {
-        let p = format!("data/HE/M821_HE_{}R.csv", r);
-        if let Ok(t) = BallisticTable::from_csv(&p) {
-            m.insert((AmmoKind::He, r), t);
-        }
-    }
-
-    // SMOKE (1..4)
-    for r in 1..=4u8 {
-        let p = format!("data/SMOKE/M819_SMOKE_{}R.csv", r);
-        if let Ok(t) = BallisticTable::from_csv(&p) {
-            m.insert((AmmoKind::Smoke, r), t);
-        }
-    }
-
-    // FLARE (1..4)
-    for r in 1..=4u8 {
-        let p = format!("data/FLARE/M853A1_FLARE_{}R.csv", r);
-        if let Ok(t) = BallisticTable::from_csv(&p) {
-            m.insert((AmmoKind::Flare, r), t);
-        }
-    }
-
-    Ok(m)
-}
-
 fn print_solution_table(ball: &BTreeMap<(AmmoKind, Ring), BallisticTable>, distance_m: f64) {
     let rings: &[u8] = &[0, 1, 2, 3, 4];
-    let kinds: &[AmmoKind] = &[AmmoKind::Practice, AmmoKind::He, AmmoKind::Smoke, AmmoKind::Flare];
+    let kinds = AmmoKind::all();
 
     println!("\n--- Elevation (mil) @ {:.2} m ---", distance_m);
 
@@ -391,7 +220,7 @@ fn add_mortar(mortars: &mut Mortars, args: &[&str]) {
     };
 
     mortars.add_mortar(Position::new(name.clone(), elevation, x, y));
-    println!("Mortier '{}' ajouté", name);
+    println!("Mortier '{}' ajoute", name);
 }
 
 fn add_target(mortars: &mut Mortars, args: &[&str]) {
@@ -415,7 +244,7 @@ fn add_target(mortars: &mut Mortars, args: &[&str]) {
     };
 
     mortars.add_target(Position::new(name.clone(), elevation, x, y));
-    println!("Cible '{}' ajoutée", name);
+    println!("Cible '{}' ajoutee", name);
 }
 
 fn calculate(mortars: &Mortars, args: &[&str], ballistics: &BTreeMap<(AmmoKind, Ring), BallisticTable>) {
@@ -434,21 +263,20 @@ fn calculate(mortars: &Mortars, args: &[&str], ballistics: &BTreeMap<(AmmoKind, 
         (Some(m), Some(t)) => {
             let distance = m.distance_to(t);
             let elevation_diff = m.elevation_difference(t);
-            let azimuth = m.azumuth_to(t);
+            let azimuth = m.azimuth_to(t);
 
             println!("Solution de tir:");
             println!("  Distance: {:.2} m", distance);
-            println!("  Différence d'élévation: {:.2} m", elevation_diff);
-            println!("  Azimut: {:.2}°", azimuth);
+            println!("  Difference d'elevation: {:.2} m", elevation_diff);
+            println!("  Azimut: {:.2} deg", azimuth);
 
-            // Tableau élévation par munition/rings (N/A si hors plage ou CSV manquant)
             if !ballistics.is_empty() {
                 print_solution_table(ballistics, distance);
             } else {
-                println!("(Ballistics non chargées: aucun tableau affiché)");
+                println!("(Ballistics non chargees: aucun tableau affiche)");
             }
         }
-        _ => println!("Mortier ou cible non trouvé"),
+        _ => println!("Mortier ou cible non trouve"),
     }
 }
 
@@ -459,7 +287,7 @@ fn rm_mortar(mortars: &mut Mortars, args: &[&str]) {
     }
     let name = args[1];
     mortars.mortar_pos.retain(|m| m.name != name);
-    println!("Mortier '{}' supprimé", name);
+    println!("Mortier '{}' supprime", name);
 }
 
 fn rm_target(mortars: &mut Mortars, args: &[&str]) {
@@ -469,27 +297,27 @@ fn rm_target(mortars: &mut Mortars, args: &[&str]) {
     }
     let name = args[1];
     mortars.target_pos.retain(|t| t.name != name);
-    println!("Cible '{}' supprimée", name);
+    println!("Cible '{}' supprimee", name);
 }
 
 fn list(mortars: &Mortars) {
     println!("\n--- Mortiers ---");
     for mortar in &mortars.mortar_pos {
-        println!("  {}: x={}, y={}, élévation={}", mortar.name, mortar.x, mortar.y, mortar.elevation);
+        println!("  {}: x={}, y={}, elevation={}", mortar.name, mortar.x, mortar.y, mortar.elevation);
     }
 
     println!("\n--- Cibles ---");
     for target in &mortars.target_pos {
-        println!("  {}: x={}, y={}, élévation={}", target.name, target.x, target.y, target.elevation);
+        println!("  {}: x={}, y={}, elevation={}", target.name, target.x, target.y, target.elevation);
     }
     println!();
 }
 
 fn show_help(args: &[&str]) {
     if args.len() < 2 {
-        println!("\n╔════════════════════════════════════════════════════════════════╗");
-        println!("║         CALCULATEUR DE SOLUTION DE TIR - SYSTÈME MORTAR        ║");
-        println!("╚════════════════════════════════════════════════════════════════╝\n");
+        println!("\n+================================================================+");
+        println!("|         CALCULATEUR DE SOLUTION DE TIR - SYSTEME MORTAR       |");
+        println!("+================================================================+\n");
 
         println!("Commandes disponibles:");
         println!("  add_mortar   - Ajouter un mortier");
@@ -498,7 +326,7 @@ fn show_help(args: &[&str]) {
         println!("  rm_mortar    - Supprimer un mortier");
         println!("  rm_target    - Supprimer une cible");
         println!("  list         - Afficher les mortiers et cibles");
-        println!("  clear        - Effacer l'écran");
+        println!("  clear        - Effacer l'ecran");
         println!("  help         - Afficher cette aide");
         println!("  exit         - Quitter le programme");
         println!("\nPour plus d'infos: help <commande>\n");
@@ -521,69 +349,49 @@ fn show_help(args: &[&str]) {
 // Help texts
 // =====================
 fn help_add_mortar() {
-    println!("\n┌─ Commande: add_mortar  ─┐");
-    println!("├─────────────────────────┘");
-    println!("│ Usage: add_mortar <name> <elevation> <x> <y>");
-    println!("│ Exemple: add_mortar m1 100 0 0");
-    println!("└─────────────────────────\n");
+    println!("\n-- Commande: add_mortar --");
+    println!("Usage: add_mortar <name> <elevation> <x> <y>");
+    println!("Exemple: add_mortar m1 100 0 0\n");
 }
 
 fn help_add_target() {
-    println!("\n┌─ Commande: add_target  ─┐");
-    println!("├─────────────────────────┘");
-    println!("│ Usage: add_target <name> <elevation> <x> <y>");
-    println!("│ Exemple: add_target t1 50 100 100");
-    println!("└─────────────────────────\n");
+    println!("\n-- Commande: add_target --");
+    println!("Usage: add_target <name> <elevation> <x> <y>");
+    println!("Exemple: add_target t1 50 100 100\n");
 }
 
 fn help_calculate() {
-    println!("\n┌─ Commande: calculate  ─┐");
-    println!("├────────────────────────┘");
-    println!("│ Usage: calculate <mortar_name> <target_name>");
-    println!("│ Exemple: calculate m1 t1");
-    println!("│ Affiche aussi un tableau Elevation(mil) par munition + ring.");
-    println!("└────────────────────────\n");
+    println!("\n-- Commande: calculate --");
+    println!("Usage: calculate <mortar_name> <target_name>");
+    println!("Exemple: calculate m1 t1");
+    println!("Affiche aussi un tableau Elevation(mil) par munition + ring.\n");
 }
 
 fn help_rm_mortar() {
-    println!("\n┌─ Commande: rm_mortar  ─┐");
-    println!("├────────────────────────┘");
-    println!("│ Usage: rm_mortar <name>");
-    println!("│ Exemple: rm_mortar m1");
-    println!("└────────────────────────\n");
+    println!("\n-- Commande: rm_mortar --");
+    println!("Usage: rm_mortar <name>");
+    println!("Exemple: rm_mortar m1\n");
 }
 
 fn help_rm_target() {
-    println!("\n┌─ Commande: rm_target  ─┐");
-    println!("├────────────────────────┘");
-    println!("│ Usage: rm_target <name>");
-    println!("│ Exemple: rm_target t1");
-    println!("└────────────────────────\n");
+    println!("\n-- Commande: rm_target --");
+    println!("Usage: rm_target <name>");
+    println!("Exemple: rm_target t1\n");
 }
 
 fn help_list() {
-    println!("\n┌─ Commande: list  ─┐");
-    println!("├────────────────────┘");
-    println!("│ Usage: list");
-    println!("└────────────────────\n");
+    println!("\n-- Commande: list --");
+    println!("Usage: list\n");
 }
 
 fn help_clear() {
-    println!("\n┌─ Commande: clear ─┐");
-    println!("├────────────────────┘");
-    println!("│ Description: Efface l'écran du terminal");
-    println!("│");
-    println!("│ Usage: clear");
-    println!("│");
-    println!("│ Arguments: (aucun)");
-    println!("│");
-    println!("│ Note: Fonctionne sur Windows (cls) et Unix/Linux (clear)");
-    println!("└────────────────────\n");
+    println!("\n-- Commande: clear --");
+    println!("Description: Efface l'ecran du terminal");
+    println!("Usage: clear");
+    println!("Note: Fonctionne sur Windows (cls) et Unix/Linux (clear)\n");
 }
 
 fn help_exit() {
-    println!("\n┌─ Commande: exit  ─┐");
-    println!("├────────────────────┘");
-    println!("│ Quitte l'application");
-    println!("└────────────────────\n");
+    println!("\n-- Commande: exit --");
+    println!("Quitte l'application\n");
 }

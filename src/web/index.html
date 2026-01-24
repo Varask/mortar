@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mortar Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Calculateur de Solution de Tir</h1>
+            <p class="subtitle">Systeme Mortar 60mm</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <div class="form-group">
+                    <h2>Position Mortier</h2>
+                    <div class="form-row">
+                        <label for="mortar-name">Nom</label>
+                        <input type="text" id="mortar-name" value="M1" placeholder="M1">
+                    </div>
+                    <div class="form-row">
+                        <label for="mortar-elevation">Elevation (m)</label>
+                        <input type="number" id="mortar-elevation" value="10" step="0.1">
+                    </div>
+                    <div class="form-row">
+                        <label for="mortar-x">X (m)</label>
+                        <input type="number" id="mortar-x" value="1000" step="1">
+                    </div>
+                    <div class="form-row">
+                        <label for="mortar-y">Y (m)</label>
+                        <input type="number" id="mortar-y" value="500" step="1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <h2>Position Cible</h2>
+                    <div class="form-row">
+                        <label for="target-name">Nom</label>
+                        <input type="text" id="target-name" value="T1" placeholder="T1">
+                    </div>
+                    <div class="form-row">
+                        <label for="target-elevation">Elevation (m)</label>
+                        <input type="number" id="target-elevation" value="5" step="0.1">
+                    </div>
+                    <div class="form-row">
+                        <label for="target-x">X (m)</label>
+                        <input type="number" id="target-x" value="1500" step="1">
+                    </div>
+                    <div class="form-row">
+                        <label for="target-y">Y (m)</label>
+                        <input type="number" id="target-y" value="800" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <button id="calculate-btn" class="calculate-btn">Calculer</button>
+
+            <div id="results" class="results hidden">
+                <h2>Solution de Tir</h2>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="metric-label">Distance</span>
+                        <span id="distance" class="metric-value">--</span>
+                        <span class="metric-unit">m</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Azimut</span>
+                        <span id="azimuth" class="metric-value">--</span>
+                        <span class="metric-unit">deg</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Diff. Elevation</span>
+                        <span id="elevation-diff" class="metric-value">--</span>
+                        <span class="metric-unit">m</span>
+                    </div>
+                </div>
+
+                <h3>Elevation (mil) par Type de Munition</h3>
+                <div class="table-container">
+                    <table id="solutions-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>0R</th>
+                                <th>1R</th>
+                                <th>2R</th>
+                                <th>3R</th>
+                                <th>4R</th>
+                            </tr>
+                        </thead>
+                        <tbody id="solutions-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="error" class="error hidden"></div>
+        </main>
+
+        <footer>
+            <p>Mortar Calculator v0.1.0</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
