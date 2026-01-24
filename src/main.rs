@@ -1,12 +1,3 @@
-// main.rs (complet) — calculate + tableau élévation par munition/rings (N/A si pas de solution)
-//
-// Déps Cargo.toml:
-// anyhow = "1"
-// csv = "1"
-// serde = { version = "1", features = ["derive"] }
-// rustyline = "14"
-// clap pas nécessaire ici
-
 use rustyline::completion::Completer;
 use rustyline::hint::Hinter;
 use rustyline::highlight::Highlighter;
