@@ -14,52 +14,105 @@
         </header>
 
         <main>
-            <div class="input-section">
-                <div class="form-group">
-                    <h2>Position Mortier</h2>
-                    <div class="form-row">
-                        <label for="mortar-name">Nom</label>
-                        <input type="text" id="mortar-name" value="M1" placeholder="M1">
+            <div class="panels">
+                <!-- Left Panel: Mortars -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Mortiers</h2>
                     </div>
-                    <div class="form-row">
-                        <label for="mortar-elevation">Elevation (m)</label>
-                        <input type="number" id="mortar-elevation" value="10" step="0.1">
+
+                    <div class="list-container">
+                        <ul id="mortars-list" class="position-list">
+                            <li class="empty-message">Aucun mortier</li>
+                        </ul>
                     </div>
-                    <div class="form-row">
-                        <label for="mortar-x">X (m)</label>
-                        <input type="number" id="mortar-x" value="1000" step="1">
-                    </div>
-                    <div class="form-row">
-                        <label for="mortar-y">Y (m)</label>
-                        <input type="number" id="mortar-y" value="500" step="1">
+
+                    <div class="form-group compact">
+                        <h3>Ajouter Mortier</h3>
+                        <div class="form-row">
+                            <label for="mortar-name">Nom</label>
+                            <input type="text" id="mortar-name" placeholder="M1">
+                        </div>
+                        <div class="form-row">
+                            <label for="mortar-elevation">Elev (m)</label>
+                            <input type="number" id="mortar-elevation" value="0" step="0.1">
+                        </div>
+                        <div class="form-row">
+                            <label for="mortar-x">X (m)</label>
+                            <input type="number" id="mortar-x" value="0" step="1">
+                        </div>
+                        <div class="form-row">
+                            <label for="mortar-y">Y (m)</label>
+                            <input type="number" id="mortar-y" value="0" step="1">
+                        </div>
+                        <button id="add-mortar-btn" class="btn btn-add">Ajouter</button>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <h2>Position Cible</h2>
-                    <div class="form-row">
-                        <label for="target-name">Nom</label>
-                        <input type="text" id="target-name" value="T1" placeholder="T1">
+                <!-- Right Panel: Targets -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Cibles</h2>
                     </div>
-                    <div class="form-row">
-                        <label for="target-elevation">Elevation (m)</label>
-                        <input type="number" id="target-elevation" value="5" step="0.1">
+
+                    <div class="list-container">
+                        <ul id="targets-list" class="position-list">
+                            <li class="empty-message">Aucune cible</li>
+                        </ul>
                     </div>
-                    <div class="form-row">
-                        <label for="target-x">X (m)</label>
-                        <input type="number" id="target-x" value="1500" step="1">
-                    </div>
-                    <div class="form-row">
-                        <label for="target-y">Y (m)</label>
-                        <input type="number" id="target-y" value="800" step="1">
+
+                    <div class="form-group compact">
+                        <h3>Ajouter Cible</h3>
+                        <div class="form-row">
+                            <label for="target-name">Nom</label>
+                            <input type="text" id="target-name" placeholder="T1">
+                        </div>
+                        <div class="form-row">
+                            <label for="target-elevation">Elev (m)</label>
+                            <input type="number" id="target-elevation" value="0" step="0.1">
+                        </div>
+                        <div class="form-row">
+                            <label for="target-x">X (m)</label>
+                            <input type="number" id="target-x" value="0" step="1">
+                        </div>
+                        <div class="form-row">
+                            <label for="target-y">Y (m)</label>
+                            <input type="number" id="target-y" value="0" step="1">
+                        </div>
+                        <button id="add-target-btn" class="btn btn-add">Ajouter</button>
                     </div>
                 </div>
             </div>
 
-            <button id="calculate-btn" class="calculate-btn">Calculer</button>
+            <!-- Selection and Calculate -->
+            <div class="selection-section">
+                <div class="selection-row">
+                    <div class="selection-item">
+                        <label for="selected-mortar">Mortier:</label>
+                        <select id="selected-mortar">
+                            <option value="">-- Selectionner --</option>
+                        </select>
+                    </div>
+                    <div class="selection-arrow">-></div>
+                    <div class="selection-item">
+                        <label for="selected-target">Cible:</label>
+                        <select id="selected-target">
+                            <option value="">-- Selectionner --</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="calculate-btn" class="calculate-btn">Calculer Solution</button>
+            </div>
 
+            <!-- Results -->
             <div id="results" class="results hidden">
                 <h2>Solution de Tir</h2>
+
+                <div class="solution-header">
+                    <span id="solution-mortar">--</span>
+                    <span class="arrow">-></span>
+                    <span id="solution-target">--</span>
+                </div>
 
                 <div class="metrics">
                     <div class="metric">
