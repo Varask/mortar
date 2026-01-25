@@ -171,6 +171,25 @@
                     </div>
                 </div>
 
+                <!-- Correction Form -->
+                <div class="correction-section">
+                    <h3>Correction de Tir</h3>
+                    <p class="correction-help">Si l'obus a devie, entrez la deviation observee:</p>
+                    <div class="correction-inputs">
+                        <div class="correction-input">
+                            <label for="correction-vertical">Vertical (m)</label>
+                            <input type="number" id="correction-vertical" value="0" step="1">
+                            <span class="input-hint">Nord(-) / Sud(+)</span>
+                        </div>
+                        <div class="correction-input">
+                            <label for="correction-horizontal">Horizontal (m)</label>
+                            <input type="number" id="correction-horizontal" value="0" step="1">
+                            <span class="input-hint">Ouest(-) / Est(+)</span>
+                        </div>
+                    </div>
+                    <button id="apply-correction-btn" class="btn btn-correct">Appliquer Correction</button>
+                </div>
+
                 <details class="all-solutions">
                     <summary>Voir toutes les elevations</summary>
                     <div class="table-container">

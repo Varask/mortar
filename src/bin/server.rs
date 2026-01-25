@@ -13,7 +13,7 @@ use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 
 use mortar::{
-    calculate_solution, load_ballistics_from, AmmoKind, BallisticTable,
+    apply_correction, calculate_solution, load_ballistics_from, AmmoKind, BallisticTable,
     FiringSolution, MortarPosition, Ring, TargetPosition, TargetType,
 };
 
@@ -78,6 +78,29 @@ struct UpdateMortarAmmoRequest {
 struct UpdateTargetTypeRequest {
     name: String,
     target_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CorrectionRequest {
+    target_name: String,
+    vertical_m: f64,   // North (negative) / South (positive)
+    horizontal_m: f64, // West (negative) / East (positive)
+}
+
+#[derive(Debug, Serialize)]
+struct CorrectionResponse {
+    success: bool,
+    original: String,
+    corrected: String,
+    correction_applied: CorrectionApplied,
+}
+
+#[derive(Debug, Serialize)]
+struct CorrectionApplied {
+    vertical_m: f64,
+    horizontal_m: f64,
+    new_x: f64,
+    new_y: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -382,6 +405,51 @@ async fn update_target_type(
     }
 }
 
+// Correction handler
+async fn correct_target(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<CorrectionRequest>,
+) -> Result<Json<CorrectionResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let mut targets = state.targets.write().await;
+
+    let target = match targets.iter().find(|t| t.name == req.target_name) {
+        Some(t) => t.clone(),
+        None => return Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: format!("Target '{}' not found", req.target_name),
+            }),
+        )),
+    };
+
+    let corrected = apply_correction(&target, req.vertical_m, req.horizontal_m);
+    let corrected_name = corrected.name.clone();
+    let new_x = corrected.x;
+    let new_y = corrected.y;
+
+    // Check if corrected target already exists
+    if let Some(existing) = targets.iter_mut().find(|t| t.name == corrected_name) {
+        // Update existing corrected target
+        existing.x = new_x;
+        existing.y = new_y;
+    } else {
+        // Add new corrected target
+        targets.push(corrected);
+    }
+
+    Ok(Json(CorrectionResponse {
+        success: true,
+        original: req.target_name,
+        corrected: corrected_name,
+        correction_applied: CorrectionApplied {
+            vertical_m: req.vertical_m,
+            horizontal_m: req.horizontal_m,
+            new_x,
+            new_y,
+        },
+    }))
+}
+
 // =====================
 // CLI Commands
 // =====================
@@ -525,6 +593,19 @@ async fn handle_cli_command(line: &str, state: &Arc<AppState>) {
                 calc_and_print(state, mortar_name, target_name).await;
             }
         }
+        "correct" | "cor" => {
+            if parts.len() < 4 {
+                println!("Usage: correct <target_name> <vertical_m> <horizontal_m>");
+                println!("  vertical_m:   Nord (negatif) / Sud (positif)");
+                println!("  horizontal_m: Ouest (negatif) / Est (positif)");
+                println!("  Exemple: correct T1 -50 30  (obus tombe 50m au Nord, 30m a l'Est)");
+            } else {
+                let target_name = parts[1];
+                let vertical: f64 = parts[2].parse().unwrap_or(0.0);
+                let horizontal: f64 = parts[3].parse().unwrap_or(0.0);
+                correct_target_cli(state, target_name, vertical, horizontal).await;
+            }
+        }
         "clear" => {
             print!("\x1B[2J\x1B[1;1H");
             let _ = io::stdout().flush();
@@ -547,6 +628,8 @@ fn print_help() {
     println!("  set_ammo, sa <mortar> <ammo>         Set mortar ammo type");
     println!("  set_type, st <target> <type>         Set target type");
     println!("  calc, c <mortar> <target>            Calculate firing solution");
+    println!("  correct, cor <target> <V> <H>        Correct target position");
+    println!("                                         V: Nord(-)/Sud(+)  H: Ouest(-)/Est(+)");
     println!("  clear                                Clear screen");
     println!();
     println!("Web interface available at: http://localhost:3000");
@@ -576,6 +659,39 @@ async fn list_all(state: &Arc<AppState>) {
             println!("  {} : X={:.0} Y={:.0} E={:.0}m [{}]", t.name, t.x, t.y, t.elevation, t.target_type);
         }
     }
+    println!();
+}
+
+async fn correct_target_cli(state: &Arc<AppState>, target_name: &str, vertical_m: f64, horizontal_m: f64) {
+    let mut targets = state.targets.write().await;
+
+    let target = match targets.iter().find(|t| t.name == target_name) {
+        Some(t) => t.clone(),
+        None => {
+            println!("Target '{}' not found", target_name);
+            return;
+        }
+    };
+
+    let corrected = apply_correction(&target, vertical_m, horizontal_m);
+    let corrected_name = corrected.name.clone();
+    let new_x = corrected.x;
+    let new_y = corrected.y;
+
+    // Check if corrected target already exists
+    if let Some(existing) = targets.iter_mut().find(|t| t.name == corrected_name) {
+        existing.x = new_x;
+        existing.y = new_y;
+        println!("Correction mise a jour: {}", corrected_name);
+    } else {
+        targets.push(corrected);
+        println!("Nouvelle cible corrigee: {}", corrected_name);
+    }
+
+    println!();
+    println!("  Original:  {} -> X={:.0} Y={:.0}", target_name, target.x, target.y);
+    println!("  Deviation: V={:+.0}m (N-/S+) H={:+.0}m (O-/E+)", vertical_m, horizontal_m);
+    println!("  Corrige:   {} -> X={:.0} Y={:.0}", corrected_name, new_x, new_y);
     println!();
 }
 
@@ -703,6 +819,7 @@ async fn main() {
         .route("/api/targets", post(add_target))
         .route("/api/targets", delete(delete_target))
         .route("/api/targets/type", post(update_target_type))
+        .route("/api/targets/correct", post(correct_target))
         // Static files
         .nest_service("/", ServeDir::new(web_path))
         .with_state(state.clone());

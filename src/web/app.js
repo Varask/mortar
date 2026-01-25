@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-mortar-btn').addEventListener('click', addMortar);
     document.getElementById('add-target-btn').addEventListener('click', addTarget);
     document.getElementById('calculate-btn').addEventListener('click', calculate);
+    document.getElementById('apply-correction-btn').addEventListener('click', applyCorrection);
 
     // Selection dropdowns
     document.getElementById('selected-mortar').addEventListener('change', (e) => {
@@ -208,6 +209,60 @@ async function updateTargetType(name, target_type) {
         if (response.ok) {
             showToast(`Type ${name} -> ${target_type}`, 'success');
             loadTargets();
+        }
+    } catch (error) {
+        showToast('Erreur de connexion', 'error');
+    }
+}
+
+async function applyCorrection() {
+    if (!selectedTarget) {
+        showToast('Selectionnez une cible d\'abord', 'error');
+        return;
+    }
+
+    const vertical_m = parseFloat(document.getElementById('correction-vertical').value) || 0;
+    const horizontal_m = parseFloat(document.getElementById('correction-horizontal').value) || 0;
+
+    if (vertical_m === 0 && horizontal_m === 0) {
+        showToast('Entrez une deviation a corriger', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/targets/correct', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                target_name: selectedTarget,
+                vertical_m,
+                horizontal_m
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast(`Correction appliquee: ${data.corrected}`, 'success');
+
+            // Reset correction inputs
+            document.getElementById('correction-vertical').value = '0';
+            document.getElementById('correction-horizontal').value = '0';
+
+            // Reload targets and select the corrected one
+            await loadTargets();
+
+            // Select the corrected target
+            selectedTarget = data.corrected;
+            document.getElementById('selected-target').value = data.corrected;
+            renderTargetsList();
+
+            // Recalculate with corrected target
+            if (selectedMortar) {
+                calculate();
+            }
+        } else {
+            showToast(data.error || 'Erreur de correction', 'error');
         }
     } catch (error) {
         showToast('Erreur de connexion', 'error');

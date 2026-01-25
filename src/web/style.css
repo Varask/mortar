@@ -510,6 +510,76 @@ main {
     font-size: 1rem;
 }
 
+/* Correction section */
+.correction-section {
+    background: var(--khaki-light);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    border: 2px dashed var(--olive);
+}
+
+.correction-section h3 {
+    color: var(--olive-dark);
+    margin: 0 0 5px 0;
+    font-size: 0.95rem;
+}
+
+.correction-help {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 12px;
+}
+
+.correction-inputs {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.correction-input {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.correction-input label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--olive-dark);
+}
+
+.correction-input input {
+    width: 100px;
+    padding: 8px;
+    border: 2px solid var(--olive);
+    border-radius: 5px;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.correction-input .input-hint {
+    font-size: 0.7rem;
+    color: #888;
+}
+
+.btn-correct {
+    background: var(--blue);
+    color: var(--white);
+    max-width: 250px;
+    margin: 0 auto;
+    display: block;
+}
+
+.btn-correct:hover {
+    background: #15293f;
+}
+
 /* All solutions details */
 .all-solutions {
     margin-top: 15px;
