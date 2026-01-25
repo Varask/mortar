@@ -357,6 +357,38 @@ pub fn calculate_solution(
     }
 }
 
+// =====================
+// Correction calculation
+// =====================
+/// Apply correction to a target position based on observed deviation
+/// - vertical_m: North (negative) / South (positive)
+/// - horizontal_m: West (negative) / East (positive)
+pub fn apply_correction(
+    target: &TargetPosition,
+    vertical_m: f64,
+    horizontal_m: f64,
+) -> TargetPosition {
+    // Correction is the opposite of the deviation
+    // If shell landed North of target (negative vertical), we need to move target South (add to Y)
+    // If shell landed East of target (positive horizontal), we need to move target West (subtract from X)
+    let corrected_x = target.x - horizontal_m;
+    let corrected_y = target.y - vertical_m;
+
+    let corrected_name = if target.name.ends_with("_C") {
+        target.name.clone()
+    } else {
+        format!("{}_C", target.name)
+    };
+
+    TargetPosition::new(
+        corrected_name,
+        target.elevation,
+        corrected_x,
+        corrected_y,
+        target.target_type,
+    )
+}
+
 // Legacy function for backward compatibility
 pub fn calculate_solution_simple(
     mortar: &Position,
