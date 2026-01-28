@@ -22,6 +22,10 @@ RUN mkdir src && \
     echo "fn main() {}" > src/bin/smooth_csv.rs && \
     echo "fn main() {}" > src/bin/test_smooth.rs
 
+# Downgrade home crate to version compatible with Rust 1.85
+# home 0.5.12 requires Rust 1.88 (not yet released)
+RUN cargo update home --precise 0.5.11
+
 # Build dependencies only (will be cached)
 RUN cargo build --release --bin server && \
     rm -rf src
