@@ -3,6 +3,9 @@ target/
 debug/
 release/
 
+# Lock file (regenerated during build)
+# Cargo.lock
+
 # IDE and editor files
 .idea/
 .vscode/
