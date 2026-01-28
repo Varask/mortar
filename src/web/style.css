@@ -510,6 +510,32 @@ main {
     font-size: 1rem;
 }
 
+.elevation-card .dispersion {
+    font-size: 0.75rem;
+    color: var(--blue);
+    font-weight: 600;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--khaki-light);
+}
+
+.elevation-card .dispersion.na {
+    color: #999;
+}
+
+/* Table dispersion */
+.table-disp {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--blue);
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.highlighted-row .table-disp {
+    color: var(--khaki-light);
+}
+
 /* Correction section */
 .correction-section {
     background: var(--khaki-light);

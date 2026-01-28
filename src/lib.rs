@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 
 // =====================
@@ -240,6 +241,64 @@ impl BallisticTable {
 
 pub type Ring = u8;
 
+// =====================
+// Dispersion data
+// =====================
+#[derive(Clone, Debug, Deserialize)]
+pub struct MetricsFile {
+    pub dispersion: BTreeMap<String, BTreeMap<String, f64>>,
+}
+
+pub type DispersionTable = BTreeMap<(AmmoKind, Ring), f64>;
+
+pub fn load_dispersion() -> Result<DispersionTable> {
+    load_dispersion_from("data")
+}
+
+pub fn load_dispersion_from<P: AsRef<Path>>(base: P) -> Result<DispersionTable> {
+    let path = base.as_ref().join("metrics.json");
+    let file = File::open(&path)?;
+    let reader = BufReader::new(file);
+    let metrics: MetricsFile = serde_json::from_reader(reader)?;
+
+    let mut table = DispersionTable::new();
+
+    for (ammo_str, rings) in &metrics.dispersion {
+        let ammo = match AmmoKind::from_str(ammo_str) {
+            Some(a) => a,
+            None => continue,
+        };
+
+        for (ring_str, &value) in rings {
+            // Parse ring from "0R", "1R", etc.
+            let ring: Ring = ring_str
+                .trim_end_matches('R')
+                .parse()
+                .unwrap_or(0);
+            table.insert((ammo, ring), value);
+        }
+    }
+
+    Ok(table)
+}
+
+/// Calculate adjusted dispersion based on elevation difference
+/// - If mortar is higher than target: +5% per meter
+/// - If mortar is lower than target: -1% per meter
+pub fn calculate_dispersion(
+    base_dispersion: f64,
+    mortar_elevation: f64,
+    target_elevation: f64,
+) -> f64 {
+    let delta = mortar_elevation - target_elevation;
+    let factor = if delta >= 0.0 {
+        1.0 + delta * 0.05  // +5% per meter when mortar is higher
+    } else {
+        1.0 + delta * 0.01  // -1% per meter when mortar is lower (delta is negative)
+    };
+    base_dispersion * factor
+}
+
 pub fn load_ballistics() -> Result<BTreeMap<(AmmoKind, Ring), BallisticTable>> {
     load_ballistics_from("data")
 }
@@ -291,10 +350,12 @@ pub struct FiringSolution {
     pub distance_m: f64,
     pub azimuth_deg: f64,
     pub elevation_diff_m: f64,
+    pub signed_elevation_diff_m: f64, // mortar - target (positive = mortar higher)
     pub mortar_ammo: String,
     pub target_type: String,
     pub recommended_ammo: String,
     pub solutions: BTreeMap<String, BTreeMap<String, Option<f64>>>,
+    pub dispersions: BTreeMap<String, BTreeMap<String, Option<f64>>>, // adjusted dispersions
     pub selected_solution: Option<SelectedSolution>,
 }
 
@@ -302,6 +363,7 @@ pub struct FiringSolution {
 pub struct SelectedSolution {
     pub ammo_type: String,
     pub elevations: BTreeMap<String, Option<f64>>,
+    pub dispersions: BTreeMap<String, Option<f64>>,
 }
 
 pub fn calculate_solution(
@@ -309,50 +371,78 @@ pub fn calculate_solution(
     target: &TargetPosition,
     ballistics: &BTreeMap<(AmmoKind, Ring), BallisticTable>,
 ) -> FiringSolution {
+    calculate_solution_with_dispersion(mortar, target, ballistics, &DispersionTable::new())
+}
+
+pub fn calculate_solution_with_dispersion(
+    mortar: &MortarPosition,
+    target: &TargetPosition,
+    ballistics: &BTreeMap<(AmmoKind, Ring), BallisticTable>,
+    dispersion_table: &DispersionTable,
+) -> FiringSolution {
     let mortar_pos = mortar.as_position();
     let target_pos = target.as_position();
 
     let distance_m = mortar_pos.distance_to(&target_pos);
     let azimuth_deg = mortar_pos.azimuth_to(&target_pos);
     let elevation_diff_m = mortar_pos.elevation_difference(&target_pos);
+    let signed_elevation_diff_m = mortar.elevation - target.elevation;
 
     let rings: &[u8] = &[0, 1, 2, 3, 4];
     let kinds = AmmoKind::all();
 
     let mut solutions: BTreeMap<String, BTreeMap<String, Option<f64>>> = BTreeMap::new();
+    let mut dispersions: BTreeMap<String, BTreeMap<String, Option<f64>>> = BTreeMap::new();
 
     for kind in kinds {
         let mut ring_solutions: BTreeMap<String, Option<f64>> = BTreeMap::new();
+        let mut ring_dispersions: BTreeMap<String, Option<f64>> = BTreeMap::new();
         for r in rings {
             let key = format!("{}R", r);
             let elev = ballistics.get(&(*kind, *r)).and_then(|t| t.elev_at(distance_m));
-            ring_solutions.insert(key, elev);
+            ring_solutions.insert(key.clone(), elev);
+
+            // Calculate adjusted dispersion
+            let disp = dispersion_table.get(&(*kind, *r)).map(|&base| {
+                calculate_dispersion(base, mortar.elevation, target.elevation)
+            });
+            ring_dispersions.insert(key, disp);
         }
         solutions.insert(kind.as_str().to_string(), ring_solutions);
+        dispersions.insert(kind.as_str().to_string(), ring_dispersions);
     }
 
     // Selected solution based on mortar's ammo type
     let selected_ammo = mortar.ammo_type;
     let mut selected_elevations: BTreeMap<String, Option<f64>> = BTreeMap::new();
+    let mut selected_dispersions: BTreeMap<String, Option<f64>> = BTreeMap::new();
     for r in rings {
         let key = format!("{}R", r);
         let elev = ballistics.get(&(selected_ammo, *r)).and_then(|t| t.elev_at(distance_m));
-        selected_elevations.insert(key, elev);
+        selected_elevations.insert(key.clone(), elev);
+
+        let disp = dispersion_table.get(&(selected_ammo, *r)).map(|&base| {
+            calculate_dispersion(base, mortar.elevation, target.elevation)
+        });
+        selected_dispersions.insert(key, disp);
     }
 
     let selected_solution = Some(SelectedSolution {
         ammo_type: selected_ammo.as_str().to_string(),
         elevations: selected_elevations,
+        dispersions: selected_dispersions,
     });
 
     FiringSolution {
         distance_m,
         azimuth_deg,
         elevation_diff_m,
+        signed_elevation_diff_m,
         mortar_ammo: mortar.ammo_type.as_str().to_string(),
         target_type: target.target_type.as_str().to_string(),
         recommended_ammo: target.target_type.suggested_ammo().as_str().to_string(),
         solutions,
+        dispersions,
         selected_solution,
     }
 }
@@ -409,5 +499,5 @@ pub fn calculate_solution_simple(
         target.y,
         TargetType::Infanterie,
     );
-    calculate_solution(&mortar_pos, &target_pos, ballistics)
+    calculate_solution_with_dispersion(&mortar_pos, &target_pos, ballistics, &DispersionTable::new())
 }

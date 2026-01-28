@@ -487,12 +487,14 @@ function displayResults(data, mortarName, targetName) {
 
         const rings = ['0R', '1R', '2R', '3R', '4R'];
         for (const ring of rings) {
-            const value = data.selected_solution.elevations[ring];
+            const elev = data.selected_solution.elevations[ring];
+            const disp = data.selected_solution.dispersions ? data.selected_solution.dispersions[ring] : null;
             const card = document.createElement('div');
             card.className = 'elevation-card';
             card.innerHTML = `
                 <div class="ring">${ring}</div>
-                <div class="value ${value === null ? 'na' : ''}">${value !== null ? value.toFixed(1) : 'N/A'}</div>
+                <div class="value ${elev === null ? 'na' : ''}">${elev !== null ? elev.toFixed(1) : 'N/A'}</div>
+                <div class="dispersion ${disp === null ? 'na' : ''}">±${disp !== null ? disp.toFixed(1) : '--'}m</div>
             `;
             cardsContainer.appendChild(card);
         }
@@ -516,12 +518,18 @@ function displayResults(data, mortarName, targetName) {
         row.appendChild(typeCell);
 
         const ammoSolutions = data.solutions[ammoType] || {};
+        const ammoDispersions = data.dispersions ? (data.dispersions[ammoType] || {}) : {};
         for (const ring of rings) {
             const cell = document.createElement('td');
-            const value = ammoSolutions[ring];
+            const elev = ammoSolutions[ring];
+            const disp = ammoDispersions[ring];
 
-            if (value !== null && value !== undefined) {
-                cell.textContent = value.toFixed(1);
+            if (elev !== null && elev !== undefined) {
+                let content = elev.toFixed(1);
+                if (disp !== null && disp !== undefined) {
+                    content += `<span class="table-disp">±${disp.toFixed(1)}</span>`;
+                }
+                cell.innerHTML = content;
             } else {
                 cell.textContent = 'N/A';
                 cell.classList.add('na');
