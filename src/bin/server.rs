@@ -851,31 +851,41 @@ async fn main() {
     println!("Type 'help' for CLI commands");
     println!();
 
-    // Spawn web server in background
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    tokio::spawn(async move {
-        axum::serve(listener, app).await.unwrap();
-    });
+    // Check if running in interactive mode (TTY attached)
+    let interactive = atty::is(atty::Stream::Stdin);
 
-    // CLI loop (non-blocking with web server)
-    let stdin = io::stdin();
-    let reader = stdin.lock();
+    if interactive {
+        // Spawn web server in background
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
 
-    print!("> ");
-    let _ = io::stdout().flush();
+        // CLI loop (non-blocking with web server)
+        let stdin = io::stdin();
+        let reader = stdin.lock();
 
-    for line in reader.lines() {
-        match line {
-            Ok(input) => {
-                if input.trim() == "exit" || input.trim() == "quit" || input.trim() == "q" {
-                    println!("Shutting down...");
-                    break;
-                }
-                handle_cli_command(&input, &state).await;
-            }
-            Err(_) => break,
-        }
         print!("> ");
         let _ = io::stdout().flush();
+
+        for line in reader.lines() {
+            match line {
+                Ok(input) => {
+                    if input.trim() == "exit" || input.trim() == "quit" || input.trim() == "q" {
+                        println!("Shutting down...");
+                        break;
+                    }
+                    handle_cli_command(&input, &state).await;
+                }
+                Err(_) => break,
+            }
+            print!("> ");
+            let _ = io::stdout().flush();
+        }
+    } else {
+        // Non-interactive mode (container/daemon): run web server only
+        println!("Running in non-interactive mode (web server only)");
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        axum::serve(listener, app).await.unwrap();
     }
 }
