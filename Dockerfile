@@ -9,6 +9,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy manifests first for better caching
@@ -50,6 +52,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
+    libfontconfig1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
