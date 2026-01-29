@@ -987,3 +987,123 @@ pub fn calculate_solution_simple(
     );
     calculate_solution_with_dispersion(&mortar_pos, &target_pos, ballistics, &DispersionTable::new())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn ammo_kind_roundtrip() {
+        for &k in AmmoKind::all() {
+            let s = k.as_str();
+            let parsed = AmmoKind::from_str(s).expect("parse should succeed");
+            assert_eq!(parsed, k);
+        }
+    }
+
+    #[test]
+    fn target_type_roundtrip_and_suggested_ammo() {
+        for &t in TargetType::all() {
+            let s = t.as_str();
+            let parsed = TargetType::from_str(s).expect("parse should succeed");
+            assert_eq!(parsed, t);
+        }
+        assert_eq!(TargetType::Infanterie.suggested_ammo(), AmmoKind::He);
+        assert_eq!(TargetType::Vehicule.suggested_ammo(), AmmoKind::He);
+        assert_eq!(TargetType::Soutien.suggested_ammo(), AmmoKind::Smoke);
+    }
+
+    #[test]
+    fn position_examples_hold() {
+        let p1 = Position::new("A".to_string(), 0.0, 0.0, 0.0);
+        let p2 = Position::new("B".to_string(), 0.0, 300.0, 400.0);
+        assert_eq!(p1.distance_to(&p2), 500.0);
+
+        let east = Position::new("E".to_string(), 0.0, 100.0, 0.0);
+        let az = p1.azimuth_to(&east);
+        assert!((az - 90.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn calculate_dispersion_matches_doc() {
+        let d1 = calculate_dispersion(39.0, 105.0, 100.0);
+        assert!((d1 - 48.75).abs() < 0.01);
+
+        let d2 = calculate_dispersion(39.0, 90.0, 100.0);
+        assert!((d2 - 35.1).abs() < 0.01);
+    }
+
+    #[test]
+    fn ballistic_table_interpolation_and_bounds() {
+        let table = BallisticTable {
+            points: vec![
+                BallisticPoint { range_m: 0.0, elev_mil: 1000.0 },
+                BallisticPoint { range_m: 100.0, elev_mil: 900.0 },
+            ],
+        };
+
+        assert_eq!(table.elev_at(0.0), Some(1000.0));
+        assert_eq!(table.elev_at(100.0), Some(900.0));
+        let mid = table.elev_at(50.0).unwrap();
+        assert!((mid - 950.0).abs() < 1e-6);
+        assert_eq!(table.elev_at(-10.0), None);
+        assert_eq!(table.elev_at(150.0), None);
+    }
+
+    #[test]
+    fn apply_correction_example() {
+        let t = TargetPosition::new(
+            "T1".to_string(),
+            100.0,
+            500.0,
+            300.0,
+            TargetType::Infanterie,
+        );
+
+        let corrected = apply_correction(&t, -50.0, 30.0);
+
+        assert_eq!(corrected.name, "T1_C");
+        assert_eq!(corrected.x, 470.0);
+        assert_eq!(corrected.y, 350.0);
+    }
+
+    #[test]
+    fn calculate_solution_with_dispersion_populates_struct() {
+        let mut ballistics: BTreeMap<(AmmoKind, Ring), BallisticTable> = BTreeMap::new();
+        ballistics.insert(
+            (AmmoKind::He, 2),
+            BallisticTable {
+                points: vec![
+                    BallisticPoint { range_m: 0.0, elev_mil: 1200.0 },
+                    BallisticPoint { range_m: 600.0, elev_mil: 1100.0 },
+                ],
+            },
+        );
+        let mut dispersions: DispersionTable = BTreeMap::new();
+        dispersions.insert((AmmoKind::He, 2), 39.0);
+
+        let mortar = MortarPosition::new("M1".into(), 100.0, 0.0, 0.0, AmmoKind::He);
+        let target = TargetPosition::new("T1".into(), 50.0, 500.0, 300.0, TargetType::Infanterie);
+
+        let sol = calculate_solution_with_dispersion(&mortar, &target, &ballistics, &dispersions);
+
+        assert!(sol.distance_m > 0.0);
+        assert!(sol.azimuth_deg >= 0.0 && sol.azimuth_deg <= 360.0);
+        assert_eq!(sol.mortar_ammo, "HE");
+        assert_eq!(sol.target_type, "INFANTERIE");
+        assert_eq!(sol.recommended_ammo, "HE");
+        assert!(sol.solutions.get("HE").is_some());
+        assert!(sol.dispersions.get("HE").is_some());
+        let sel = sol.selected_solution.as_ref().expect("selected_solution");
+        assert_eq!(sel.ammo_type, "HE");
+        assert!(sel.elevations.contains_key("2R"));
+        assert!(sel.dispersions.contains_key("2R"));
+    }
+}
+
+pub mod server;
+pub mod server_cli;
+
+// Re-export so server_cli can `use crate::AppState;`
+pub use server::AppState;
