@@ -151,7 +151,7 @@ pub struct TypesResponse {
 // Router builder
 // =====================
 
-pub fn build_app_with_state(data_path: &str, web_path: &str) -> (axum::Router<Arc<AppState>>, Arc<AppState>) {
+pub fn build_app_with_state(data_path: &str, web_path: &str) -> (Router, Arc<AppState>) {
     let ballistics = load_ballistics_from(data_path).unwrap_or_else(|e| {
         eprintln!("Warning: failed to load ballistics: {e}");
         BTreeMap::new()
@@ -169,27 +169,35 @@ pub fn build_app_with_state(data_path: &str, web_path: &str) -> (axum::Router<Ar
         targets: RwLock::new(Vec::new()),
     });
 
-    let app = Router::new()
+    // IMPORTANT: build as Router<Arc<AppState>> (missing state), then provide it and end as Router<()>.
+    let app: Router<Arc<AppState>> = Router::new()
+        // Health & info
         .route("/api/health", get(health_check))
         .route("/api/types", get(get_types))
         .route("/api/ammo-types", get(get_ammo_types))
+        // Calculate
         .route("/api/calculate", post(calculate_by_name))
+        // Mortars CRUD
         .route("/api/mortars", get(list_mortars))
         .route("/api/mortars", post(add_mortar))
         .route("/api/mortars", delete(delete_mortar))
         .route("/api/mortars/ammo", post(update_mortar_ammo))
+        // Targets CRUD
         .route("/api/targets", get(list_targets))
         .route("/api/targets", post(add_target))
         .route("/api/targets", delete(delete_target))
         .route("/api/targets/type", post(update_target_type))
         .route("/api/targets/correct", post(correct_target))
-        .nest_service("/", ServeDir::new(web_path))
-        .with_state(state.clone());
+        // Static files
+        .nest_service("/", ServeDir::new(web_path));
+
+    // Provide the Arc<AppState>, choose new “missing state” = () so we return Router (Router<()>).
+    let app: Router = app.with_state::<()>(state.clone());
 
     (app, state)
 }
 
-pub fn build_app(data_path: &str, web_path: &str) -> axum::Router<Arc<AppState>> {
+pub fn build_app(data_path: &str, web_path: &str) -> Router {
     build_app_with_state(data_path, web_path).0
 }
 
