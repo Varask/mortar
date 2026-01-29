@@ -1101,3 +1101,9 @@ mod tests {
         assert!(sel.dispersions.contains_key("2R"));
     }
 }
+
+pub mod server;
+pub mod server_cli;
+
+// Re-export so server_cli can `use crate::AppState;`
+pub use server::AppState;
