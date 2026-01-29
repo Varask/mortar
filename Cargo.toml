@@ -2,6 +2,18 @@
 name = "mortar"
 version = "0.1.0"
 edition = "2021"
+description = "Calculateur balistique pour mortier 60mm avec interface CLI et Web"
+authors = ["Mortar Team"]
+license = "MIT"
+repository = "https://github.com/example/mortar"
+documentation = "https://example.github.io/mortar"
+readme = "README.md"
+keywords = ["ballistics", "mortar", "military", "calculator"]
+categories = ["command-line-utilities", "simulation"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 rustyline = "14.0"
@@ -9,6 +21,7 @@ csv = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
+atty = "0.2"
 clap = { version = "4", features = ["derive"] }
 splines = "4"
 plotters = "0.3"

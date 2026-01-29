@@ -13,8 +13,8 @@ use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 
 use mortar::{
-    apply_correction, calculate_solution, load_ballistics_from, AmmoKind, BallisticTable,
-    FiringSolution, MortarPosition, Ring, TargetPosition, TargetType,
+    apply_correction, calculate_solution_with_dispersion, load_ballistics_from, load_dispersion_from,
+    AmmoKind, BallisticTable, DispersionTable, FiringSolution, MortarPosition, Ring, TargetPosition, TargetType,
 };
 
 // =====================
@@ -22,6 +22,7 @@ use mortar::{
 // =====================
 struct AppState {
     ballistics: BTreeMap<(AmmoKind, Ring), BallisticTable>,
+    dispersions: DispersionTable,
     mortars: RwLock<Vec<MortarPosition>>,
     targets: RwLock<Vec<TargetPosition>>,
 }
@@ -195,7 +196,7 @@ async fn calculate_by_name(
 
     match (mortar, target) {
         (Some(m), Some(t)) => {
-            let solution = calculate_solution(m, t, &state.ballistics);
+            let solution = calculate_solution_with_dispersion(m, t, &state.ballistics, &state.dispersions);
             Ok(Json(solution))
         }
         (None, _) => Err((
@@ -704,14 +705,14 @@ async fn calc_and_print(state: &Arc<AppState>, mortar_name: &str, target_name: &
 
     match (mortar, target) {
         (Some(m), Some(t)) => {
-            let solution = calculate_solution(m, t, &state.ballistics);
+            let solution = calculate_solution_with_dispersion(m, t, &state.ballistics, &state.dispersions);
 
             println!();
             println!("=== SOLUTION DE TIR: {} -> {} ===", m.name, t.name);
             println!();
             println!("  Distance:       {:.1} m", solution.distance_m);
             println!("  Azimut:         {:.1} deg", solution.azimuth_deg);
-            println!("  Diff Elevation: {:.1} m", solution.elevation_diff_m);
+            println!("  Diff Elevation: {:.1} m (signe: {:+.1} m)", solution.elevation_diff_m, solution.signed_elevation_diff_m);
             println!();
             println!("  Ogive mortier:  {}", solution.mortar_ammo);
             println!("  Type cible:     {}", solution.target_type);
@@ -721,7 +722,7 @@ async fn calc_and_print(state: &Arc<AppState>, mortar_name: &str, target_name: &
             // Print selected solution (based on mortar ammo)
             if let Some(sel) = &solution.selected_solution {
                 println!("  >>> ELEVATION {} <<<", sel.ammo_type);
-                print!("     ");
+                print!("  Elev:");
                 for r in 0..=4 {
                     let key = format!("{}R", r);
                     match sel.elevations.get(&key).and_then(|v| *v) {
@@ -730,26 +731,38 @@ async fn calc_and_print(state: &Arc<AppState>, mortar_name: &str, target_name: &
                     }
                 }
                 println!();
+                print!("  Disp:");
+                for r in 0..=4 {
+                    let key = format!("{}R", r);
+                    match sel.dispersions.get(&key).and_then(|v| *v) {
+                        Some(d) => print!(" {}:{:.1}m", key, d),
+                        None => print!(" {}:N/A", key),
+                    }
+                }
+                println!();
             }
 
             println!();
-            println!("  --- Toutes les elevations (mil) ---");
+            println!("  --- Toutes les elevations (mil) / dispersions (m) ---");
             let rings = ["0R", "1R", "2R", "3R", "4R"];
             print!("  {:>10} |", "TYPE");
             for r in &rings {
-                print!(" {:>6} |", r);
+                print!(" {:>11} |", r);
             }
             println!();
-            println!("  {}", "-".repeat(10 + 2 + rings.len() * 9));
+            println!("  {}", "-".repeat(10 + 2 + rings.len() * 14));
 
             for ammo in AmmoKind::all() {
                 print!("  {:>10} |", ammo.as_str());
-                if let Some(ammo_sol) = solution.solutions.get(ammo.as_str()) {
-                    for r in &rings {
-                        match ammo_sol.get(*r).and_then(|v| *v) {
-                            Some(e) => print!(" {:>6.1} |", e),
-                            None => print!(" {:>6} |", "N/A"),
-                        }
+                let ammo_sol = solution.solutions.get(ammo.as_str());
+                let ammo_disp = solution.dispersions.get(ammo.as_str());
+                for r in &rings {
+                    let elev = ammo_sol.and_then(|s| s.get(*r).and_then(|v| *v));
+                    let disp = ammo_disp.and_then(|d| d.get(*r).and_then(|v| *v));
+                    match (elev, disp) {
+                        (Some(e), Some(d)) => print!(" {:>5.1}/{:<4.1} |", e, d),
+                        (Some(e), None) => print!(" {:>5.1}/---- |", e),
+                        (None, _) => print!(" {:>11} |", "N/A"),
                     }
                 }
                 println!();
@@ -784,8 +797,16 @@ async fn main() {
 
     println!("Loaded {} ballistic tables", ballistics.len());
 
+    let dispersions = load_dispersion_from(data_path).unwrap_or_else(|e| {
+        eprintln!("Warning: failed to load dispersions: {e}");
+        DispersionTable::new()
+    });
+
+    println!("Loaded {} dispersion entries", dispersions.len());
+
     let state = Arc::new(AppState {
         ballistics,
+        dispersions,
         mortars: RwLock::new(Vec::new()),
         targets: RwLock::new(Vec::new()),
     });
@@ -830,31 +851,41 @@ async fn main() {
     println!("Type 'help' for CLI commands");
     println!();
 
-    // Spawn web server in background
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    tokio::spawn(async move {
-        axum::serve(listener, app).await.unwrap();
-    });
+    // Check if running in interactive mode (TTY attached)
+    let interactive = atty::is(atty::Stream::Stdin);
 
-    // CLI loop (non-blocking with web server)
-    let stdin = io::stdin();
-    let reader = stdin.lock();
+    if interactive {
+        // Spawn web server in background
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
 
-    print!("> ");
-    let _ = io::stdout().flush();
+        // CLI loop (non-blocking with web server)
+        let stdin = io::stdin();
+        let reader = stdin.lock();
 
-    for line in reader.lines() {
-        match line {
-            Ok(input) => {
-                if input.trim() == "exit" || input.trim() == "quit" || input.trim() == "q" {
-                    println!("Shutting down...");
-                    break;
-                }
-                handle_cli_command(&input, &state).await;
-            }
-            Err(_) => break,
-        }
         print!("> ");
         let _ = io::stdout().flush();
+
+        for line in reader.lines() {
+            match line {
+                Ok(input) => {
+                    if input.trim() == "exit" || input.trim() == "quit" || input.trim() == "q" {
+                        println!("Shutting down...");
+                        break;
+                    }
+                    handle_cli_command(&input, &state).await;
+                }
+                Err(_) => break,
+            }
+            print!("> ");
+            let _ = io::stdout().flush();
+        }
+    } else {
+        // Non-interactive mode (container/daemon): run web server only
+        println!("Running in non-interactive mode (web server only)");
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        axum::serve(listener, app).await.unwrap();
     }
 }

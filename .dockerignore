@@ -1,0 +1,31 @@
+# Build artifacts
+target/
+debug/
+release/
+
+# Lock file (regenerated during build)
+# Cargo.lock
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+*.md
+LICENSE
+
+# Misc
+.mortar_history
+*.log
