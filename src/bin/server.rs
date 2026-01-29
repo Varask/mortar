@@ -893,7 +893,7 @@ async fn main() {
 #[cfg(test)]
 mod cli_tests {
     use super::*;
-    use mortar::{AmmoKind, BallisticPoint, BallisticTable, Ring};
+    use mortar::{AmmoKind, BallisticPoint, BallisticTable};
     use tokio::runtime::Runtime;
 
     fn test_state_with_ballistics() -> Arc<AppState> {
