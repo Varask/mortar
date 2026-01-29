@@ -889,3 +889,52 @@ async fn main() {
         axum::serve(listener, app).await.unwrap();
     }
 }
+
+#[cfg(test)]
+mod cli_tests {
+    use super::*;
+    use mortar::{AmmoKind, BallisticPoint, BallisticTable, Ring};
+    use tokio::runtime::Runtime;
+
+    fn test_state_with_ballistics() -> Arc<AppState> {
+        let mut ballistics = BTreeMap::new();
+        ballistics.insert(
+            (AmmoKind::He, 2),
+            BallisticTable {
+                points: vec![
+                    BallisticPoint { range_m: 0.0, elev_mil: 1200.0 },
+                    BallisticPoint { range_m: 1000.0, elev_mil: 900.0 },
+                ],
+            },
+        );
+        let dispersions = DispersionTable::new();
+
+        Arc::new(AppState {
+            ballistics,
+            dispersions,
+            mortars: RwLock::new(Vec::new()),
+            targets: RwLock::new(Vec::new()),
+        })
+    }
+
+    #[test]
+    fn cli_add_mortar_and_target_and_calc_do_not_panic() {
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            let state = test_state_with_ballistics();
+
+            handle_cli_command("am M1 100 0 0 HE", &state).await;
+            handle_cli_command("at T1 50 500 300 INFANTERIE", &state).await;
+            handle_cli_command("c M1 T1", &state).await;
+        });
+    }
+
+    #[test]
+    fn cli_invalid_command_is_handled() {
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            let state = test_state_with_ballistics();
+            handle_cli_command("unknown_cmd", &state).await;
+        });
+    }
+}
