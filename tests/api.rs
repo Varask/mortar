@@ -179,58 +179,17 @@ async fn web_assets_are_served() {
 
 // Helper: start the same router as main, but bound to 127.0.0.1:0
 async fn spawn_app() -> String {
-    use axum::Router;
-    use std::sync::Arc;
-    use mortar::{
-        load_ballistics_from, load_dispersion_from, AmmoKind, BallisticTable, DispersionTable,
-        MortarPosition, Ring, TargetPosition, TargetType,
-    };
-    use tokio::sync::RwLock;
-    use tower_http::services::ServeDir;
-
-    // Construct AppState exactly like main(), but for tests we can point to ./data
-    let ballistics = load_ballistics_from("data").unwrap_or_default();
-    let dispersions = load_dispersion_from("data").unwrap_or_default();
-
-    struct AppState {
-        ballistics: std::collections::BTreeMap<(AmmoKind, Ring), BallisticTable>,
-        dispersions: DispersionTable,
-        mortars: RwLock<Vec<MortarPosition>>,
-        targets: RwLock<Vec<TargetPosition>>,
-    }
-
-    let state = Arc::new(AppState {
-        ballistics,
-        dispersions,
-        mortars: RwLock::new(Vec::new()),
-        targets: RwLock::new(Vec::new()),
-    });
-
-    let web_path = "src/web";
-
-    let app = Router::new()
-        .route("/api/health", axum::routing::get(crate::health_check))
-        .route("/api/types", axum::routing::get(crate::get_types))
-        .route("/api/ammo-types", axum::routing::get(crate::get_ammo_types))
-        .route("/api/calculate", axum::routing::post(crate::calculate_by_name))
-        .route("/api/mortars", axum::routing::get(crate::list_mortars))
-        .route("/api/mortars", axum::routing::post(crate::add_mortar))
-        .route("/api/mortars", axum::routing::delete(crate::delete_mortar))
-        .route("/api/mortars/ammo", axum::routing::post(crate::update_mortar_ammo))
-        .route("/api/targets", axum::routing::get(crate::list_targets))
-        .route("/api/targets", axum::routing::post(crate::add_target))
-        .route("/api/targets", axum::routing::delete(crate::delete_target))
-        .route("/api/targets/type", axum::routing::post(crate::update_target_type))
-        .route("/api/targets/correct", axum::routing::post(crate::correct_target))
-        .nest_service("/", ServeDir::new(web_path))
-        .with_state(state);
-
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind failed");
     let port = listener.local_addr().unwrap().port();
     let addr = format!("http://127.0.0.1:{port}");
 
+    // Spawn your actual server binary
     tokio::spawn(async move {
-        axum::serve(listener, app).await.unwrap();
+        axum::Server::from_tcp(listener)
+            .unwrap()
+            .serve(crate::app().into_make_service()) // This requires app() to be exposed
+            .await
+            .unwrap();
     });
 
     addr
