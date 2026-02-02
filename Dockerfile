@@ -17,16 +17,12 @@ RUN apt-get update && apt-get install -y \
 COPY Cargo.toml Cargo.lock ./
 
 # Create dummy src to build dependencies
-RUN mkdir src && \
-    echo "fn main() {}" > src/main.rs && \
-    mkdir -p src/bin && \
+RUN mkdir -p src/bin && \
+    echo "pub fn dummy() {}" > src/lib.rs && \
     echo "fn main() {}" > src/bin/server.rs && \
     echo "fn main() {}" > src/bin/smooth_csv.rs && \
-    echo "fn main() {}" > src/bin/test_smooth.rs
-
-# Downgrade home crate to version compatible with Rust 1.85
-# home 0.5.12 requires Rust 1.88 (not yet released)
-RUN cargo update home --precise 0.5.11
+    echo "fn main() {}" > src/bin/test_smooth.rs && \
+    touch src/pchip.rs src/server.rs src/server_cli.rs
 
 # Build dependencies only (will be cached)
 RUN cargo build --release --bin server && \
@@ -36,7 +32,7 @@ RUN cargo build --release --bin server && \
 COPY src ./src
 
 # Touch files to ensure rebuild
-RUN touch src/main.rs src/lib.rs src/bin/server.rs
+RUN touch src/lib.rs src/bin/server.rs
 
 # Build the actual application
 RUN cargo build --release --bin server
