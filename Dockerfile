@@ -18,7 +18,7 @@ COPY Cargo.toml Cargo.lock ./
 
 # Create dummy src to build dependencies
 RUN mkdir src && \
-    echo "" > src/lib.rs && \
+    echo "fn main() {}" > src/main.rs && \
     mkdir -p src/bin && \
     echo "fn main() {}" > src/bin/server.rs && \
     echo "fn main() {}" > src/bin/smooth_csv.rs && \
@@ -36,7 +36,7 @@ RUN cargo build --release --bin server && \
 COPY src ./src
 
 # Touch files to ensure rebuild
-RUN touch src/lib.rs src/bin/server.rs
+RUN touch src/main.rs src/lib.rs src/bin/server.rs
 
 # Build the actual application
 RUN cargo build --release --bin server
