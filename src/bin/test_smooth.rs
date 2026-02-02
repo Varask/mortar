@@ -26,6 +26,7 @@ struct Args {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(dead_code)]
 struct InRow {
     range_m: f64,
     elev_mil: f64,

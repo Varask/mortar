@@ -15,6 +15,11 @@ categories = ["command-line-utilities", "simulation"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+
 [dependencies]
 rustyline = "14.0"
 csv = "1"
