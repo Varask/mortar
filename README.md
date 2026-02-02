@@ -137,11 +137,13 @@ mortar/
 ├── docker-compose.yml      # Configuration Docker Compose
 ├── src/
 │   ├── lib.rs              # Bibliotheque core (balistique, dispersion)
-│   ├── main.rs             # CLI standalone
+│   ├── pchip.rs            # Interpolation PCHIP (Fritsch-Carlson)
+│   ├── server.rs           # API REST Axum (routes, handlers)
+│   ├── server_cli.rs       # Commandes CLI interactives
 │   ├── bin/
-│   │   ├── server.rs       # Serveur web Axum + CLI
+│   │   ├── server.rs       # Point d'entree serveur web + CLI
 │   │   ├── smooth_csv.rs   # Utilitaire lissage PCHIP
-│   │   └── test_smooth.rs  # Tests visualisation
+│   │   └── test_smooth.rs  # Visualisation PCHIP (export PNG)
 │   └── web/
 │       ├── index.html      # Interface web
 │       ├── style.css       # Styles (theme militaire)
@@ -152,6 +154,8 @@ mortar/
 │   ├── HE/                 # Tables M821 (0R-4R)
 │   ├── SMOKE/              # Tables M819 (1R-4R)
 │   └── FLARE/              # Tables M853A1 (1R-4R)
+├── tests/
+│   └── api.rs              # Tests d'integration API
 └── doc/                    # Documentation
 ```
 
@@ -209,9 +213,12 @@ Voir le dossier `doc/` pour :
 
 - **axum** : Framework web async
 - **tokio** : Runtime async
-- **serde** : Serialisation JSON
+- **tower-http** : Middleware CORS et fichiers statiques
+- **serde** / **serde_json** : Serialisation JSON
 - **csv** : Parsing des tables balistiques
-- **rustyline** : CLI interactive avec historique
+- **anyhow** : Gestion d'erreurs
+- **clap** : Parsing d'arguments CLI (utilitaires)
+- **plotters** : Visualisation (utilitaire test_smooth)
 
 ## Licence
 

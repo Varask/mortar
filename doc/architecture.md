@@ -65,9 +65,20 @@ struct FiringSolution { distance_m, azimuth_deg, ... }
 |----------|-------------|
 | `load_ballistics()` | Charge les tables CSV |
 | `load_dispersion()` | Charge metrics.json |
+| `calculate_solution()` | Calcule la solution sans dispersion |
 | `calculate_solution_with_dispersion()` | Calcule la solution complete |
 | `calculate_dispersion()` | Ajuste la dispersion au denivele |
 | `apply_correction()` | Corrige une position de cible |
+
+### 1b. Module PCHIP (`pchip.rs`)
+
+Module d'interpolation cubique monotone (Fritsch-Carlson).
+Utilise par les utilitaires `smooth_csv` et `test_smooth` pour le lissage des tables balistiques.
+
+| Fonction | Description |
+|----------|-------------|
+| `pchip_slopes()` | Calcule les pentes PCHIP |
+| `pchip_eval()` | Evalue l'interpolation en un point |
 
 ### 2. Serveur (`server.rs`)
 
