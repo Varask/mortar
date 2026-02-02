@@ -1,4 +1,4 @@
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, IsTerminal};
 
 use mortar::server::build_app_with_state;
 use mortar::server_cli::{handle_cli_command, print_prompt};
@@ -33,7 +33,7 @@ async fn main() {
     println!("Ballistics from: {data_path}");
     println!();
 
-    let interactive = atty::is(atty::Stream::Stdin);
+    let interactive = io::stdin().is_terminal();
 
     if interactive {
         // Spawn web server in background

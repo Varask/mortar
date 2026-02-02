@@ -21,14 +21,11 @@ reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 
 [dependencies]
-rustyline = "14.0"
 csv = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
-atty = "0.2"
 clap = { version = "4", features = ["derive"] }
-splines = "4"
 plotters = "0.3"
 
 # Web server

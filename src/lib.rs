@@ -955,39 +955,6 @@ pub fn apply_correction(
     )
 }
 
-/// Calcule une solution de tir simplifiée (fonction legacy).
-///
-/// Utilise les positions génériques et des valeurs par défaut pour le type
-/// de munition (HE) et le type de cible (Infanterie).
-///
-/// # Note
-///
-/// Cette fonction est conservée pour la compatibilité avec l'ancien code.
-/// Préférez utiliser [`calculate_solution_with_dispersion`] pour les nouvelles
-/// implémentations.
-#[deprecated(since = "0.2.0", note = "Use calculate_solution_with_dispersion instead")]
-pub fn calculate_solution_simple(
-    mortar: &Position,
-    target: &Position,
-    ballistics: &BTreeMap<(AmmoKind, Ring), BallisticTable>,
-) -> FiringSolution {
-    let mortar_pos = MortarPosition::new(
-        mortar.name.clone(),
-        mortar.elevation,
-        mortar.x,
-        mortar.y,
-        AmmoKind::He,
-    );
-    let target_pos = TargetPosition::new(
-        target.name.clone(),
-        target.elevation,
-        target.x,
-        target.y,
-        TargetType::Infanterie,
-    );
-    calculate_solution_with_dispersion(&mortar_pos, &target_pos, ballistics, &DispersionTable::new())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1102,6 +1069,7 @@ mod tests {
     }
 }
 
+pub mod pchip;
 pub mod server;
 pub mod server_cli;
 
