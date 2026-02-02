@@ -9,7 +9,7 @@ Mortar est structure en plusieurs couches :
 │                    Interfaces                            │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │
 │  │   Web UI    │  │  REST API   │  │      CLI        │  │
-│  │  (app.js)   │  │   (Axum)    │  │  (rustyline)    │  │
+│  │  (app.js)   │  │   (Axum)    │  │ (server_cli.rs) │  │
 │  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘  │
 └─────────┼────────────────┼──────────────────┼───────────┘
           │                │                  │

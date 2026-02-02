@@ -137,7 +137,8 @@ mortar/
 ├── docker-compose.yml      # Configuration Docker Compose
 ├── src/
 │   ├── lib.rs              # Bibliotheque core (balistique, dispersion)
-│   ├── main.rs             # CLI standalone
+│   ├── server.rs           # API REST (Axum) + etat applicatif
+│   ├── server_cli.rs       # CLI interactive integree au serveur
 │   ├── bin/
 │   │   ├── server.rs       # Serveur web Axum + CLI
 │   │   ├── smooth_csv.rs   # Utilitaire lissage PCHIP
@@ -211,7 +212,7 @@ Voir le dossier `doc/` pour :
 - **tokio** : Runtime async
 - **serde** : Serialisation JSON
 - **csv** : Parsing des tables balistiques
-- **rustyline** : CLI interactive avec historique
+- **tower-http** : Serving fichiers statiques
 
 ## Licence
 
