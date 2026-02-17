@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::sync::Arc;
 
 pub async fn handle_cli_command(line: &str, state: &Arc<AppState>) {
-    let parts: Vec<&str> = line.trim().split_whitespace().collect();
+    let parts: Vec<&str> = line.split_whitespace().collect();
     if parts.is_empty() {
         return;
     }
@@ -122,7 +122,7 @@ async fn add_mortar_cli(parts: &[&str], state: &Arc<AppState>) {
     let y: f64 = parts[4].parse().unwrap_or(0.0);
 
     let ammo = if parts.len() > 5 {
-        AmmoKind::from_str(parts[5]).unwrap_or(AmmoKind::He)
+        AmmoKind::parse_str(parts[5]).unwrap_or(AmmoKind::He)
     } else {
         AmmoKind::He
     };
@@ -155,7 +155,7 @@ async fn add_target_cli(parts: &[&str], state: &Arc<AppState>) {
     let y: f64 = parts[4].parse().unwrap_or(0.0);
 
     let ttype = if parts.len() > 5 {
-        TargetType::from_str(parts[5]).unwrap_or(TargetType::Infanterie)
+        TargetType::parse_str(parts[5]).unwrap_or(TargetType::Infanterie)
     } else {
         TargetType::Infanterie
     };
@@ -219,7 +219,7 @@ async fn set_ammo_cli(parts: &[&str], state: &Arc<AppState>) {
     }
 
     let name = parts[1];
-    let ammo = match AmmoKind::from_str(parts[2]) {
+    let ammo = match AmmoKind::parse_str(parts[2]) {
         Some(a) => a,
         None => {
             println!("Invalid ammo type: {}", parts[2]);
@@ -244,7 +244,7 @@ async fn set_type_cli(parts: &[&str], state: &Arc<AppState>) {
     }
 
     let name = parts[1];
-    let ttype = match TargetType::from_str(parts[2]) {
+    let ttype = match TargetType::parse_str(parts[2]) {
         Some(t) => t,
         None => {
             println!("Invalid target type: {}", parts[2]);

@@ -118,10 +118,10 @@ impl AmmoKind {
     ///
     /// ```
     /// use mortar::AmmoKind;
-    /// assert_eq!(AmmoKind::from_str("he"), Some(AmmoKind::He));
-    /// assert_eq!(AmmoKind::from_str("invalid"), None);
+    /// assert_eq!(AmmoKind::parse_str("he"), Some(AmmoKind::He));
+    /// assert_eq!(AmmoKind::parse_str("invalid"), None);
     /// ```
-    pub fn from_str(s: &str) -> Option<AmmoKind> {
+    pub fn parse_str(s: &str) -> Option<AmmoKind> {
         match s.to_uppercase().as_str() {
             "PRACTICE" => Some(AmmoKind::Practice),
             "HE" => Some(AmmoKind::He),
@@ -193,10 +193,10 @@ impl TargetType {
     ///
     /// ```
     /// use mortar::TargetType;
-    /// assert_eq!(TargetType::from_str("INF"), Some(TargetType::Infanterie));
-    /// assert_eq!(TargetType::from_str("vehicule"), Some(TargetType::Vehicule));
+    /// assert_eq!(TargetType::parse_str("INF"), Some(TargetType::Infanterie));
+    /// assert_eq!(TargetType::parse_str("vehicule"), Some(TargetType::Vehicule));
     /// ```
-    pub fn from_str(s: &str) -> Option<TargetType> {
+    pub fn parse_str(s: &str) -> Option<TargetType> {
         match s.to_uppercase().as_str() {
             "INFANTERIE" | "INF" => Some(TargetType::Infanterie),
             "VEHICULE" | "VEH" => Some(TargetType::Vehicule),
@@ -619,7 +619,7 @@ pub fn load_dispersion_from<P: AsRef<Path>>(base: P) -> Result<DispersionTable> 
     let mut table = DispersionTable::new();
 
     for (ammo_str, rings) in &metrics.dispersion {
-        let ammo = match AmmoKind::from_str(ammo_str) {
+        let ammo = match AmmoKind::parse_str(ammo_str) {
             Some(a) => a,
             None => continue,
         };
@@ -1002,7 +1002,7 @@ mod tests {
     fn ammo_kind_roundtrip() {
         for &k in AmmoKind::all() {
             let s = k.as_str();
-            let parsed = AmmoKind::from_str(s).expect("parse should succeed");
+            let parsed = AmmoKind::parse_str(s).expect("parse should succeed");
             assert_eq!(parsed, k);
         }
     }
@@ -1011,7 +1011,7 @@ mod tests {
     fn target_type_roundtrip_and_suggested_ammo() {
         for &t in TargetType::all() {
             let s = t.as_str();
-            let parsed = TargetType::from_str(s).expect("parse should succeed");
+            let parsed = TargetType::parse_str(s).expect("parse should succeed");
             assert_eq!(parsed, t);
         }
         assert_eq!(TargetType::Infanterie.suggested_ammo(), AmmoKind::He);
@@ -1110,8 +1110,8 @@ mod tests {
         assert_eq!(sol.mortar_ammo, "HE");
         assert_eq!(sol.target_type, "INFANTERIE");
         assert_eq!(sol.recommended_ammo, "HE");
-        assert!(sol.solutions.get("HE").is_some());
-        assert!(sol.dispersions.get("HE").is_some());
+        assert!(sol.solutions.contains_key("HE"));
+        assert!(sol.dispersions.contains_key("HE"));
         let sel = sol.selected_solution.as_ref().expect("selected_solution");
         assert_eq!(sel.ammo_type, "HE");
         assert!(sel.elevations.contains_key("2R"));

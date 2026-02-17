@@ -296,7 +296,7 @@ pub async fn add_mortar(
         ));
     }
 
-    let ammo_type = AmmoKind::from_str(&req.ammo_type).unwrap_or(AmmoKind::He);
+    let ammo_type = AmmoKind::parse_str(&req.ammo_type).unwrap_or(AmmoKind::He);
     let mut mortars = state.mortars.write().await;
 
     if mortars.iter().any(|m| m.name == req.name) {
@@ -349,7 +349,7 @@ pub async fn update_mortar_ammo(
     State(state): State<Arc<AppState>>,
     Json(req): Json<UpdateMortarAmmoRequest>,
 ) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
-    let ammo_type = match AmmoKind::from_str(&req.ammo_type) {
+    let ammo_type = match AmmoKind::parse_str(&req.ammo_type) {
         Some(a) => a,
         None => {
             return Err((
@@ -398,7 +398,7 @@ pub async fn add_target(
         ));
     }
 
-    let target_type = TargetType::from_str(&req.target_type).unwrap_or(TargetType::Infanterie);
+    let target_type = TargetType::parse_str(&req.target_type).unwrap_or(TargetType::Infanterie);
     let mut targets = state.targets.write().await;
 
     if targets.iter().any(|t| t.name == req.name) {
@@ -451,7 +451,7 @@ pub async fn update_target_type(
     State(state): State<Arc<AppState>>,
     Json(req): Json<UpdateTargetTypeRequest>,
 ) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
-    let target_type = match TargetType::from_str(&req.target_type) {
+    let target_type = match TargetType::parse_str(&req.target_type) {
         Some(t) => t,
         None => {
             return Err((
