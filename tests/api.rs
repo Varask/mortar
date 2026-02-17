@@ -51,7 +51,7 @@ async fn health_ok() {
 
     let body: Value = res.json().await.unwrap();
     assert_eq!(body["status"], "ok");
-    assert!(body["version"].as_str().unwrap_or("").len() > 0);
+    assert!(!body["version"].as_str().unwrap_or("").is_empty());
 }
 
 #[derive(serde::Serialize)]

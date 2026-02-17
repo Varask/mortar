@@ -144,12 +144,12 @@ fn main() -> Result<()> {
             &RED,
         ))?
         .label("pchip spline")
-        .legend(|(x, y)| PathElement::new(vec![(x - 10, y), (x + 10, y)], &RED));
+        .legend(|(x, y)| PathElement::new(vec![(x - 10, y), (x + 10, y)], RED));
 
     chart
         .configure_series_labels()
-        .border_style(&BLACK)
-        .background_style(&WHITE.mix(0.9))
+        .border_style(BLACK)
+        .background_style(WHITE.mix(0.9))
         .draw()?;
 
     println!("\nSaved plot: {}", args.out);
