@@ -6,8 +6,6 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
-
-
 struct Args {
     /// Input CSV path
     input: PathBuf,
@@ -96,9 +94,12 @@ fn main() -> Result<()> {
         r += args.step;
     }
 
-    let out_path = args.out.unwrap_or_else(|| default_out_path(&args.input, args.step));
+    let out_path = args
+        .out
+        .unwrap_or_else(|| default_out_path(&args.input, args.step));
     let mut wtr = csv::Writer::from_writer(
-        File::create(&out_path).with_context(|| format!("Failed to create {}", out_path.display()))?,
+        File::create(&out_path)
+            .with_context(|| format!("Failed to create {}", out_path.display()))?,
     );
     for row in out_rows {
         wtr.serialize(row)?;

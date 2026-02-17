@@ -48,7 +48,10 @@ pub async fn handle_cli_command(line: &str, state: &Arc<AppState>) {
             let _ = io::stdout().flush();
         }
 
-        _ => println!("Unknown command: '{}'. Type 'help' for available commands.", parts[0]),
+        _ => println!(
+            "Unknown command: '{}'. Type 'help' for available commands.",
+            parts[0]
+        ),
     }
 }
 
@@ -128,7 +131,13 @@ async fn add_mortar_cli(parts: &[&str], state: &Arc<AppState>) {
     if mortars.iter().any(|m| m.name == name) {
         println!("Error: Mortar '{}' already exists", name);
     } else {
-        mortars.push(crate::MortarPosition::new(name.clone(), elevation, x, y, ammo));
+        mortars.push(crate::MortarPosition::new(
+            name.clone(),
+            elevation,
+            x,
+            y,
+            ammo,
+        ));
         println!("Mortar '{}' added with {} ammo", name, ammo);
     }
 }
@@ -155,7 +164,13 @@ async fn add_target_cli(parts: &[&str], state: &Arc<AppState>) {
     if targets.iter().any(|t| t.name == name) {
         println!("Error: Target '{}' already exists", name);
     } else {
-        targets.push(crate::TargetPosition::new(name.clone(), elevation, x, y, ttype));
+        targets.push(crate::TargetPosition::new(
+            name.clone(),
+            elevation,
+            x,
+            y,
+            ttype,
+        ));
         println!("Target '{}' added as {}", name, ttype);
     }
 }
@@ -246,7 +261,12 @@ async fn set_type_cli(parts: &[&str], state: &Arc<AppState>) {
     }
 }
 
-pub async fn correct_target_cli(state: &Arc<AppState>, target_name: &str, vertical_m: f64, horizontal_m: f64) {
+pub async fn correct_target_cli(
+    state: &Arc<AppState>,
+    target_name: &str,
+    vertical_m: f64,
+    horizontal_m: f64,
+) {
     let mut targets = state.targets.write().await;
 
     let target = match targets.iter().find(|t| t.name == target_name) {
@@ -272,12 +292,18 @@ pub async fn correct_target_cli(state: &Arc<AppState>, target_name: &str, vertic
     }
 
     println!();
-    println!("  Original:  {} -> X={:.0} Y={:.0}", target_name, target.x, target.y);
+    println!(
+        "  Original:  {} -> X={:.0} Y={:.0}",
+        target_name, target.x, target.y
+    );
     println!(
         "  Deviation: V={:+.0}m (N-/S+) H={:+.0}m (O-/E+)",
         vertical_m, horizontal_m
     );
-    println!("  Corrige:   {} -> X={:.0} Y={:.0}", corrected_name, new_x, new_y);
+    println!(
+        "  Corrige:   {} -> X={:.0} Y={:.0}",
+        corrected_name, new_x, new_y
+    );
     println!();
 }
 
@@ -290,7 +316,8 @@ pub async fn calc_and_print(state: &Arc<AppState>, mortar_name: &str, target_nam
 
     match (mortar, target) {
         (Some(m), Some(t)) => {
-            let solution = calculate_solution_with_dispersion(m, t, &state.ballistics, &state.dispersions);
+            let solution =
+                calculate_solution_with_dispersion(m, t, &state.ballistics, &state.dispersions);
 
             println!();
             println!("=== SOLUTION DE TIR: {} -> {} ===", m.name, t.name);

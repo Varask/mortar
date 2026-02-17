@@ -46,8 +46,8 @@ fn main() -> Result<()> {
     }
 
     // read
-    let mut rdr = Reader::from_path(&args.input)
-        .with_context(|| format!("open {}", args.input.display()))?;
+    let mut rdr =
+        Reader::from_path(&args.input).with_context(|| format!("open {}", args.input.display()))?;
 
     let mut pts: Vec<(f64, f64)> = vec![];
     for rec in rdr.deserialize::<InRow>() {
@@ -92,7 +92,10 @@ fn main() -> Result<()> {
         println!("{:>2}: range={:>6.0}m  elev={:>8.2} mil", i, rx, ry);
     }
 
-    println!("\n--- SPLINED step={}m (first {}) ---", args.step, args.print_n);
+    println!(
+        "\n--- SPLINED step={}m (first {}) ---",
+        args.step, args.print_n
+    );
     for (i, (rx, ry)) in spline.iter().take(args.print_n).enumerate() {
         println!("{:>2}: range={:>6}m  elev={:>8.2} mil", i, rx, ry);
     }
@@ -125,13 +128,14 @@ fn main() -> Result<()> {
         .draw()?;
 
     // Discrete points
-    chart.draw_series(
-        x.iter()
-            .zip(y.iter())
-            .map(|(rx, ry)| Circle::new((*rx, *ry), 4, BLACK.filled())),
-    )?
-    .label("discrete")
-    .legend(|(x, y)| Circle::new((x, y), 4, BLACK.filled()));
+    chart
+        .draw_series(
+            x.iter()
+                .zip(y.iter())
+                .map(|(rx, ry)| Circle::new((*rx, *ry), 4, BLACK.filled())),
+        )?
+        .label("discrete")
+        .legend(|(x, y)| Circle::new((x, y), 4, BLACK.filled()));
 
     // Spline line
     chart

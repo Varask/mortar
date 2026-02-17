@@ -12,7 +12,10 @@ fn repo_paths() -> (String, String) {
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let data = root.join("data");
     let web = root.join("src").join("web");
-    (data.to_string_lossy().to_string(), web.to_string_lossy().to_string())
+    (
+        data.to_string_lossy().to_string(),
+        web.to_string_lossy().to_string(),
+    )
 }
 
 async fn spawn_app() -> TestApp {
@@ -153,7 +156,12 @@ async fn web_assets_are_served() {
     let app = spawn_app().await;
 
     // index
-    let res = app.client.get(format!("{}/", app.base_url)).send().await.unwrap();
+    let res = app
+        .client
+        .get(format!("{}/", app.base_url))
+        .send()
+        .await
+        .unwrap();
     assert!(res.status().is_success());
 
     let html = res.text().await.unwrap();

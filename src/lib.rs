@@ -94,7 +94,12 @@ impl AmmoKind {
     /// assert_eq!(AmmoKind::all().len(), 4);
     /// ```
     pub fn all() -> &'static [AmmoKind] {
-        &[AmmoKind::Practice, AmmoKind::He, AmmoKind::Smoke, AmmoKind::Flare]
+        &[
+            AmmoKind::Practice,
+            AmmoKind::He,
+            AmmoKind::Smoke,
+            AmmoKind::Flare,
+        ]
     }
 
     /// Parse une chaîne de caractères en type de munition.
@@ -169,7 +174,11 @@ impl TargetType {
 
     /// Retourne un slice contenant tous les types de cibles disponibles.
     pub fn all() -> &'static [TargetType] {
-        &[TargetType::Infanterie, TargetType::Vehicule, TargetType::Soutien]
+        &[
+            TargetType::Infanterie,
+            TargetType::Vehicule,
+            TargetType::Soutien,
+        ]
     }
 
     /// Parse une chaîne de caractères en type de cible.
@@ -261,7 +270,12 @@ impl Position {
     /// * `x` - Coordonnée X en mètres
     /// * `y` - Coordonnée Y en mètres
     pub fn new(name: String, elevation: f64, x: f64, y: f64) -> Self {
-        Position { name, elevation, x, y }
+        Position {
+            name,
+            elevation,
+            x,
+            y,
+        }
     }
 
     /// Calcule la distance horizontale (2D) vers une autre position.
@@ -363,7 +377,13 @@ impl MortarPosition {
     /// * `y` - Coordonnée Y en mètres
     /// * `ammo_type` - Type de munition chargée
     pub fn new(name: String, elevation: f64, x: f64, y: f64, ammo_type: AmmoKind) -> Self {
-        MortarPosition { name, elevation, x, y, ammo_type }
+        MortarPosition {
+            name,
+            elevation,
+            x,
+            y,
+            ammo_type,
+        }
     }
 
     /// Convertit en position générique (perd l'information de munition).
@@ -401,7 +421,13 @@ impl TargetPosition {
     /// * `y` - Coordonnée Y en mètres
     /// * `target_type` - Type tactique de la cible
     pub fn new(name: String, elevation: f64, x: f64, y: f64, target_type: TargetType) -> Self {
-        TargetPosition { name, elevation, x, y, target_type }
+        TargetPosition {
+            name,
+            elevation,
+            x,
+            y,
+            target_type,
+        }
     }
 
     /// Convertit en position générique (perd l'information de type).
@@ -469,7 +495,10 @@ impl BallisticTable {
         for rec in rdr.deserialize::<Row>() {
             let r = rec?;
             if r.range_m.is_finite() && r.elev_mil.is_finite() {
-                pts.push(BallisticPoint { range_m: r.range_m, elev_mil: r.elev_mil });
+                pts.push(BallisticPoint {
+                    range_m: r.range_m,
+                    elev_mil: r.elev_mil,
+                });
             }
         }
 
@@ -511,11 +540,17 @@ impl BallisticTable {
             return None;
         }
 
-        if let Ok(i) = self.points.binary_search_by(|p| p.range_m.partial_cmp(&range_m).unwrap()) {
+        if let Ok(i) = self
+            .points
+            .binary_search_by(|p| p.range_m.partial_cmp(&range_m).unwrap())
+        {
             return Some(self.points[i].elev_mil);
         }
 
-        let idx = match self.points.binary_search_by(|p| p.range_m.partial_cmp(&range_m).unwrap()) {
+        let idx = match self
+            .points
+            .binary_search_by(|p| p.range_m.partial_cmp(&range_m).unwrap())
+        {
             Ok(i) => i,
             Err(ins) => ins.saturating_sub(1),
         };
@@ -590,10 +625,7 @@ pub fn load_dispersion_from<P: AsRef<Path>>(base: P) -> Result<DispersionTable> 
         };
 
         for (ring_str, &value) in rings {
-            let ring: Ring = ring_str
-                .trim_end_matches('R')
-                .parse()
-                .unwrap_or(0);
+            let ring: Ring = ring_str.trim_end_matches('R').parse().unwrap_or(0);
             table.insert((ammo, ring), value);
         }
     }
@@ -645,9 +677,9 @@ pub fn calculate_dispersion(
 ) -> f64 {
     let delta = mortar_elevation - target_elevation;
     let factor = if delta >= 0.0 {
-        1.0 + delta * 0.05  // +5% per meter when mortar is higher
+        1.0 + delta * 0.05 // +5% per meter when mortar is higher
     } else {
-        1.0 + delta * 0.01  // -1% per meter when mortar is lower (delta is negative)
+        1.0 + delta * 0.01 // -1% per meter when mortar is lower (delta is negative)
     };
     base_dispersion * factor
 }
@@ -689,7 +721,9 @@ pub fn load_ballistics() -> Result<BTreeMap<(AmmoKind, Ring), BallisticTable>> {
 /// # Arguments
 ///
 /// * `base` - Chemin du répertoire de données
-pub fn load_ballistics_from<P: AsRef<Path>>(base: P) -> Result<BTreeMap<(AmmoKind, Ring), BallisticTable>> {
+pub fn load_ballistics_from<P: AsRef<Path>>(
+    base: P,
+) -> Result<BTreeMap<(AmmoKind, Ring), BallisticTable>> {
     let base = base.as_ref();
     let mut m: BTreeMap<(AmmoKind, Ring), BallisticTable> = BTreeMap::new();
 
@@ -843,12 +877,14 @@ pub fn calculate_solution_with_dispersion(
         let mut ring_dispersions: BTreeMap<String, Option<f64>> = BTreeMap::new();
         for r in rings {
             let key = format!("{}R", r);
-            let elev = ballistics.get(&(*kind, *r)).and_then(|t| t.elev_at(distance_m));
+            let elev = ballistics
+                .get(&(*kind, *r))
+                .and_then(|t| t.elev_at(distance_m));
             ring_solutions.insert(key.clone(), elev);
 
-            let disp = dispersion_table.get(&(*kind, *r)).map(|&base| {
-                calculate_dispersion(base, mortar.elevation, target.elevation)
-            });
+            let disp = dispersion_table
+                .get(&(*kind, *r))
+                .map(|&base| calculate_dispersion(base, mortar.elevation, target.elevation));
             ring_dispersions.insert(key, disp);
         }
         solutions.insert(kind.as_str().to_string(), ring_solutions);
@@ -861,12 +897,14 @@ pub fn calculate_solution_with_dispersion(
     let mut selected_dispersions: BTreeMap<String, Option<f64>> = BTreeMap::new();
     for r in rings {
         let key = format!("{}R", r);
-        let elev = ballistics.get(&(selected_ammo, *r)).and_then(|t| t.elev_at(distance_m));
+        let elev = ballistics
+            .get(&(selected_ammo, *r))
+            .and_then(|t| t.elev_at(distance_m));
         selected_elevations.insert(key.clone(), elev);
 
-        let disp = dispersion_table.get(&(selected_ammo, *r)).map(|&base| {
-            calculate_dispersion(base, mortar.elevation, target.elevation)
-        });
+        let disp = dispersion_table
+            .get(&(selected_ammo, *r))
+            .map(|&base| calculate_dispersion(base, mortar.elevation, target.elevation));
         selected_dispersions.insert(key, disp);
     }
 
@@ -1005,8 +1043,14 @@ mod tests {
     fn ballistic_table_interpolation_and_bounds() {
         let table = BallisticTable {
             points: vec![
-                BallisticPoint { range_m: 0.0, elev_mil: 1000.0 },
-                BallisticPoint { range_m: 100.0, elev_mil: 900.0 },
+                BallisticPoint {
+                    range_m: 0.0,
+                    elev_mil: 1000.0,
+                },
+                BallisticPoint {
+                    range_m: 100.0,
+                    elev_mil: 900.0,
+                },
             ],
         };
 
@@ -1042,8 +1086,14 @@ mod tests {
             (AmmoKind::He, 2),
             BallisticTable {
                 points: vec![
-                    BallisticPoint { range_m: 0.0, elev_mil: 1200.0 },
-                    BallisticPoint { range_m: 600.0, elev_mil: 1100.0 },
+                    BallisticPoint {
+                        range_m: 0.0,
+                        elev_mil: 1200.0,
+                    },
+                    BallisticPoint {
+                        range_m: 600.0,
+                        elev_mil: 1100.0,
+                    },
                 ],
             },
         );

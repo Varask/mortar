@@ -12,8 +12,9 @@ use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 
 use crate::{
-    apply_correction, calculate_solution_with_dispersion, load_ballistics_from, load_dispersion_from, AmmoKind,
-    BallisticTable, DispersionTable, FiringSolution, MortarPosition, Ring, TargetPosition, TargetType,
+    apply_correction, calculate_solution_with_dispersion, load_ballistics_from,
+    load_dispersion_from, AmmoKind, BallisticTable, DispersionTable, FiringSolution,
+    MortarPosition, Ring, TargetPosition, TargetType,
 };
 
 // =====================
@@ -214,8 +215,14 @@ pub async fn health_check() -> Json<HealthResponse> {
 
 pub async fn get_types() -> Json<TypesResponse> {
     Json(TypesResponse {
-        ammo_types: AmmoKind::all().iter().map(|a| a.as_str().to_string()).collect(),
-        target_types: TargetType::all().iter().map(|t| t.as_str().to_string()).collect(),
+        ammo_types: AmmoKind::all()
+            .iter()
+            .map(|a| a.as_str().to_string())
+            .collect(),
+        target_types: TargetType::all()
+            .iter()
+            .map(|t| t.as_str().to_string())
+            .collect(),
     })
 }
 
@@ -250,7 +257,8 @@ pub async fn calculate_by_name(
 
     match (mortar, target) {
         (Some(m), Some(t)) => {
-            let solution = calculate_solution_with_dispersion(m, t, &state.ballistics, &state.dispersions);
+            let solution =
+                calculate_solution_with_dispersion(m, t, &state.ballistics, &state.dispersions);
             Ok(Json(solution))
         }
         (None, _) => Err((
@@ -300,7 +308,13 @@ pub async fn add_mortar(
         ));
     }
 
-    mortars.push(MortarPosition::new(req.name.clone(), req.elevation, req.x, req.y, ammo_type));
+    mortars.push(MortarPosition::new(
+        req.name.clone(),
+        req.elevation,
+        req.x,
+        req.y,
+        ammo_type,
+    ));
 
     Ok(Json(SuccessResponse {
         success: true,
@@ -396,7 +410,13 @@ pub async fn add_target(
         ));
     }
 
-    targets.push(TargetPosition::new(req.name.clone(), req.elevation, req.x, req.y, target_type));
+    targets.push(TargetPosition::new(
+        req.name.clone(),
+        req.elevation,
+        req.x,
+        req.y,
+        target_type,
+    ));
 
     Ok(Json(SuccessResponse {
         success: true,
