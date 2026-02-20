@@ -60,7 +60,6 @@ struct NewMortar<'a> {
     elevation: f64,
     x: f64,
     y: f64,
-    ammo_type: &'a str,
 }
 
 #[derive(serde::Serialize)]
@@ -70,6 +69,7 @@ struct NewTarget<'a> {
     x: f64,
     y: f64,
     target_type: &'a str,
+    ammo_type: &'a str,
 }
 
 #[derive(serde::Serialize)]
@@ -91,7 +91,6 @@ async fn full_happy_path_returns_firing_solution_json() {
             elevation: 100.0,
             x: 0.0,
             y: 0.0,
-            ammo_type: "HE",
         })
         .send()
         .await
@@ -108,6 +107,7 @@ async fn full_happy_path_returns_firing_solution_json() {
             x: 500.0,
             y: 300.0,
             target_type: "INFANTERIE",
+            ammo_type: "HE",
         })
         .send()
         .await

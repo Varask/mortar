@@ -60,14 +60,14 @@ pub fn print_help() {
     println!("=== MORTAR CALCULATOR CLI ===");
     println!();
     println!("Commands:");
-    println!("  help, h                              Show this help");
-    println!("  list, ls                             List all mortars and targets");
-    println!("  add_mortar, am <n> <e> <x> <y> [ammo]  Add mortar (ammo: HE/PRACTICE/SMOKE/FLARE)");
-    println!("  add_target, at <n> <e> <x> <y> [type]  Add target (type: INF/VEH/SOU)");
-    println!("  rm_mortar, rmm <name>                Remove mortar");
-    println!("  rm_target, rmt <name>                Remove target");
-    println!("  set_ammo, sa <mortar> <ammo>         Set mortar ammo type");
-    println!("  set_type, st <target> <type>         Set target type");
+    println!("  help, h                                    Show this help");
+    println!("  list, ls                                   List all mortars and targets");
+    println!("  add_mortar, am <n> <e> <x> <y>             Add mortar");
+    println!("  add_target, at <n> <e> <x> <y> [type] [ammo]  Add target (type: INF/VEH/SOU, ammo: HE/PRACTICE/SMOKE/FLARE)");
+    println!("  rm_mortar, rmm <name>                      Remove mortar");
+    println!("  rm_target, rmt <name>                      Remove target");
+    println!("  set_ammo, sa <target> <ammo>               Set target ammo type");
+    println!("  set_type, st <target> <type>               Set target type");
     println!("  calc, c <mortar> <target>            Calculate firing solution");
     println!("  correct, cor <target> <V> <H>        Correct target position");
     println!("                                         V: Nord(-)/Sud(+)  H: Ouest(-)/Est(+)");
@@ -88,8 +88,8 @@ pub async fn list_all(state: &Arc<AppState>) {
     } else {
         for m in mortars.iter() {
             println!(
-                "  {} : X={:.0} Y={:.0} E={:.0}m [{}]",
-                m.name, m.x, m.y, m.elevation, m.ammo_type
+                "  {} : X={:.0} Y={:.0} E={:.0}m",
+                m.name, m.x, m.y, m.elevation
             );
         }
     }
@@ -101,8 +101,8 @@ pub async fn list_all(state: &Arc<AppState>) {
     } else {
         for t in targets.iter() {
             println!(
-                "  {} : X={:.0} Y={:.0} E={:.0}m [{}]",
-                t.name, t.x, t.y, t.elevation, t.target_type
+                "  {} : X={:.0} Y={:.0} E={:.0}m [{}] [{}]",
+                t.name, t.x, t.y, t.elevation, t.target_type, t.ammo_type
             );
         }
     }
@@ -111,8 +111,7 @@ pub async fn list_all(state: &Arc<AppState>) {
 
 async fn add_mortar_cli(parts: &[&str], state: &Arc<AppState>) {
     if parts.len() < 5 {
-        println!("Usage: add_mortar <name> <elevation> <x> <y> [ammo_type]");
-        println!("  ammo_type: HE, PRACTICE, SMOKE, FLARE (default: HE)");
+        println!("Usage: add_mortar <name> <elevation> <x> <y>");
         return;
     }
 
@@ -121,31 +120,20 @@ async fn add_mortar_cli(parts: &[&str], state: &Arc<AppState>) {
     let x: f64 = parts[3].parse().unwrap_or(0.0);
     let y: f64 = parts[4].parse().unwrap_or(0.0);
 
-    let ammo = if parts.len() > 5 {
-        AmmoKind::parse_str(parts[5]).unwrap_or(AmmoKind::He)
-    } else {
-        AmmoKind::He
-    };
-
     let mut mortars = state.mortars.write().await;
     if mortars.iter().any(|m| m.name == name) {
         println!("Error: Mortar '{}' already exists", name);
     } else {
-        mortars.push(crate::MortarPosition::new(
-            name.clone(),
-            elevation,
-            x,
-            y,
-            ammo,
-        ));
-        println!("Mortar '{}' added with {} ammo", name, ammo);
+        mortars.push(crate::MortarPosition::new(name.clone(), elevation, x, y));
+        println!("Mortar '{}' added", name);
     }
 }
 
 async fn add_target_cli(parts: &[&str], state: &Arc<AppState>) {
     if parts.len() < 5 {
-        println!("Usage: add_target <name> <elevation> <x> <y> [target_type]");
+        println!("Usage: add_target <name> <elevation> <x> <y> [target_type] [ammo_type]");
         println!("  target_type: INFANTERIE/INF, VEHICULE/VEH, SOUTIEN/SOU (default: INFANTERIE)");
+        println!("  ammo_type: HE, PRACTICE, SMOKE, FLARE (default: HE)");
         return;
     }
 
@@ -160,6 +148,12 @@ async fn add_target_cli(parts: &[&str], state: &Arc<AppState>) {
         TargetType::Infanterie
     };
 
+    let ammo = if parts.len() > 6 {
+        AmmoKind::parse_str(parts[6]).unwrap_or(AmmoKind::He)
+    } else {
+        AmmoKind::He
+    };
+
     let mut targets = state.targets.write().await;
     if targets.iter().any(|t| t.name == name) {
         println!("Error: Target '{}' already exists", name);
@@ -170,8 +164,9 @@ async fn add_target_cli(parts: &[&str], state: &Arc<AppState>) {
             x,
             y,
             ttype,
+            ammo,
         ));
-        println!("Target '{}' added as {}", name, ttype);
+        println!("Target '{}' added as {} [{}]", name, ttype, ammo);
     }
 }
 
@@ -213,7 +208,7 @@ async fn rm_target_cli(parts: &[&str], state: &Arc<AppState>) {
 
 async fn set_ammo_cli(parts: &[&str], state: &Arc<AppState>) {
     if parts.len() < 3 {
-        println!("Usage: set_ammo <mortar_name> <ammo_type>");
+        println!("Usage: set_ammo <target_name> <ammo_type>");
         println!("  ammo_type: HE, PRACTICE, SMOKE, FLARE");
         return;
     }
@@ -227,12 +222,12 @@ async fn set_ammo_cli(parts: &[&str], state: &Arc<AppState>) {
         }
     };
 
-    let mut mortars = state.mortars.write().await;
-    if let Some(m) = mortars.iter_mut().find(|m| m.name == name) {
-        m.ammo_type = ammo;
-        println!("Mortar '{}' ammo set to {}", name, ammo);
+    let mut targets = state.targets.write().await;
+    if let Some(t) = targets.iter_mut().find(|t| t.name == name) {
+        t.ammo_type = ammo;
+        println!("Target '{}' ammo set to {}", name, ammo);
     } else {
-        println!("Mortar '{}' not found", name);
+        println!("Target '{}' not found", name);
     }
 }
 
@@ -329,7 +324,7 @@ pub async fn calc_and_print(state: &Arc<AppState>, mortar_name: &str, target_nam
                 solution.elevation_diff_m, solution.signed_elevation_diff_m
             );
             println!();
-            println!("  Ogive mortier:  {}", solution.mortar_ammo);
+            println!("  Ogive:          {}", solution.mortar_ammo);
             println!("  Type cible:     {}", solution.target_type);
             println!("  Ogive suggeree: {}", solution.recommended_ammo);
             println!();

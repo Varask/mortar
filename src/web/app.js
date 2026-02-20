@@ -72,7 +72,6 @@ async function addMortar() {
     const elevation = parseFloat(document.getElementById('mortar-elevation').value) || 0;
     const x = parseFloat(document.getElementById('mortar-x').value) || 0;
     const y = parseFloat(document.getElementById('mortar-y').value) || 0;
-    const ammo_type = document.getElementById('mortar-ammo').value;
 
     if (!name) {
         showToast('Le nom du mortier est requis', 'error');
@@ -83,13 +82,13 @@ async function addMortar() {
         const response = await fetch('/api/mortars', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, elevation, x, y, ammo_type })
+            body: JSON.stringify({ name, elevation, x, y })
         });
 
         const data = await response.json();
 
         if (response.ok) {
-            showToast(`Mortier '${name}' ajoute [${ammo_type}]`, 'success');
+            showToast(`Mortier '${name}' ajoute`, 'success');
             document.getElementById('mortar-name').value = '';
             document.getElementById('mortar-elevation').value = '0';
             document.getElementById('mortar-x').value = '0';
@@ -124,9 +123,9 @@ async function deleteMortar(name) {
     }
 }
 
-async function updateMortarAmmo(name, ammo_type) {
+async function updateTargetAmmo(name, ammo_type) {
     try {
-        const response = await fetch('/api/mortars/ammo', {
+        const response = await fetch('/api/targets/ammo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, ammo_type })
@@ -134,7 +133,7 @@ async function updateMortarAmmo(name, ammo_type) {
 
         if (response.ok) {
             showToast(`Ogive ${name} -> ${ammo_type}`, 'success');
-            loadMortars();
+            loadTargets();
         }
     } catch (error) {
         showToast('Erreur de connexion', 'error');
@@ -147,6 +146,7 @@ async function addTarget() {
     const x = parseFloat(document.getElementById('target-x').value) || 0;
     const y = parseFloat(document.getElementById('target-y').value) || 0;
     const target_type = document.getElementById('target-type').value;
+    const ammo_type = document.getElementById('target-ammo').value;
 
     if (!name) {
         showToast('Le nom de la cible est requis', 'error');
@@ -157,13 +157,13 @@ async function addTarget() {
         const response = await fetch('/api/targets', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, elevation, x, y, target_type })
+            body: JSON.stringify({ name, elevation, x, y, target_type, ammo_type })
         });
 
         const data = await response.json();
 
         if (response.ok) {
-            showToast(`Cible '${name}' ajoutee [${target_type}]`, 'success');
+            showToast(`Cible '${name}' ajoutee [${target_type}] [${ammo_type}]`, 'success');
             document.getElementById('target-name').value = '';
             document.getElementById('target-elevation').value = '0';
             document.getElementById('target-x').value = '0';
@@ -329,16 +329,10 @@ function renderMortarsList() {
         li.className = selectedMortar === mortar.name ? 'selected' : '';
         li.innerHTML = `
             <div class="position-info" data-name="${mortar.name}">
-                <span class="position-name">${mortar.name} <small class="ammo-badge">[${mortar.ammo_type}]</small></span>
+                <span class="position-name">${mortar.name}</span>
                 <span class="position-coords">X:${mortar.x} Y:${mortar.y} E:${mortar.elevation}m</span>
             </div>
             <div class="item-actions">
-                <select class="ammo-select" data-name="${mortar.name}">
-                    <option value="HE" ${mortar.ammo_type === 'He' ? 'selected' : ''}>HE</option>
-                    <option value="PRACTICE" ${mortar.ammo_type === 'Practice' ? 'selected' : ''}>PRACTICE</option>
-                    <option value="SMOKE" ${mortar.ammo_type === 'Smoke' ? 'selected' : ''}>SMOKE</option>
-                    <option value="FLARE" ${mortar.ammo_type === 'Flare' ? 'selected' : ''}>FLARE</option>
-                </select>
                 <button class="btn-delete" data-name="${mortar.name}">X</button>
             </div>
         `;
@@ -348,12 +342,6 @@ function renderMortarsList() {
             selectedMortar = mortar.name;
             document.getElementById('selected-mortar').value = mortar.name;
             renderMortarsList();
-        });
-
-        // Ammo type change
-        li.querySelector('.ammo-select').addEventListener('change', (e) => {
-            e.stopPropagation();
-            updateMortarAmmo(mortar.name, e.target.value);
         });
 
         // Delete button
@@ -380,14 +368,20 @@ function renderTargetsList() {
         li.className = selectedTarget === target.name ? 'selected' : '';
         li.innerHTML = `
             <div class="position-info" data-name="${target.name}">
-                <span class="position-name">${target.name} <small class="type-badge">[${target.target_type}]</small></span>
+                <span class="position-name">${target.name}</span>
                 <span class="position-coords">X:${target.x} Y:${target.y} E:${target.elevation}m</span>
             </div>
             <div class="item-actions">
                 <select class="type-select" data-name="${target.name}">
-                    <option value="INFANTERIE" ${target.target_type === 'Infanterie' ? 'selected' : ''}>INF</option>
-                    <option value="VEHICULE" ${target.target_type === 'Vehicule' ? 'selected' : ''}>VEH</option>
-                    <option value="SOUTIEN" ${target.target_type === 'Soutien' ? 'selected' : ''}>SOU</option>
+                    <option value="INFANTERIE" ${target.target_type === 'INFANTERIE' ? 'selected' : ''}>INF</option>
+                    <option value="VEHICULE" ${target.target_type === 'VEHICULE' ? 'selected' : ''}>VEH</option>
+                    <option value="SOUTIEN" ${target.target_type === 'SOUTIEN' ? 'selected' : ''}>SOU</option>
+                </select>
+                <select class="ammo-select" data-name="${target.name}">
+                    <option value="HE" ${target.ammo_type === 'HE' ? 'selected' : ''}>HE</option>
+                    <option value="PRACTICE" ${target.ammo_type === 'PRACTICE' ? 'selected' : ''}>PRAC</option>
+                    <option value="SMOKE" ${target.ammo_type === 'SMOKE' ? 'selected' : ''}>SMK</option>
+                    <option value="FLARE" ${target.ammo_type === 'FLARE' ? 'selected' : ''}>FLR</option>
                 </select>
                 <button class="btn-delete" data-name="${target.name}">X</button>
             </div>
@@ -404,6 +398,12 @@ function renderTargetsList() {
         li.querySelector('.type-select').addEventListener('change', (e) => {
             e.stopPropagation();
             updateTargetType(target.name, e.target.value);
+        });
+
+        // Ammo type change
+        li.querySelector('.ammo-select').addEventListener('change', (e) => {
+            e.stopPropagation();
+            updateTargetAmmo(target.name, e.target.value);
         });
 
         // Delete button
@@ -424,7 +424,7 @@ function updateMortarsDropdown() {
     for (const mortar of mortars) {
         const option = document.createElement('option');
         option.value = mortar.name;
-        option.textContent = `${mortar.name} [${mortar.ammo_type}]`;
+        option.textContent = mortar.name;
         select.appendChild(option);
     }
 
@@ -443,7 +443,7 @@ function updateTargetsDropdown() {
     for (const target of targets) {
         const option = document.createElement('option');
         option.value = target.name;
-        option.textContent = `${target.name} [${target.target_type}]`;
+        option.textContent = `${target.name} [${target.target_type}] [${target.ammo_type}]`;
         select.appendChild(option);
     }
 

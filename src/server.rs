@@ -17,6 +17,10 @@ use crate::{
     MortarPosition, Ring, TargetPosition, TargetType,
 };
 
+fn default_ammo() -> String {
+    "HE".to_string()
+}
+
 // =====================
 // Application state
 // =====================
@@ -42,12 +46,6 @@ pub struct AddMortarRequest {
     pub elevation: f64,
     pub x: f64,
     pub y: f64,
-    #[serde(default = "default_ammo")]
-    pub ammo_type: String,
-}
-
-fn default_ammo() -> String {
-    "HE".to_string()
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,6 +56,8 @@ pub struct AddTargetRequest {
     pub y: f64,
     #[serde(default = "default_target_type")]
     pub target_type: String,
+    #[serde(default = "default_ammo")]
+    pub ammo_type: String,
 }
 
 fn default_target_type() -> String {
@@ -70,15 +70,15 @@ pub struct DeletePositionRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateMortarAmmoRequest {
-    pub name: String,
-    pub ammo_type: String,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct UpdateTargetTypeRequest {
     pub name: String,
     pub target_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateTargetAmmoRequest {
+    pub name: String,
+    pub ammo_type: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -182,12 +182,12 @@ pub fn build_app_with_state(data_path: &str, web_path: &str) -> (Router, Arc<App
         .route("/api/mortars", get(list_mortars))
         .route("/api/mortars", post(add_mortar))
         .route("/api/mortars", delete(delete_mortar))
-        .route("/api/mortars/ammo", post(update_mortar_ammo))
         // Targets CRUD
         .route("/api/targets", get(list_targets))
         .route("/api/targets", post(add_target))
         .route("/api/targets", delete(delete_target))
         .route("/api/targets/type", post(update_target_type))
+        .route("/api/targets/ammo", post(update_target_ammo))
         .route("/api/targets/correct", post(correct_target))
         // Static files
         .nest_service("/", ServeDir::new(web_path));
@@ -296,7 +296,6 @@ pub async fn add_mortar(
         ));
     }
 
-    let ammo_type = AmmoKind::parse_str(&req.ammo_type).unwrap_or(AmmoKind::He);
     let mut mortars = state.mortars.write().await;
 
     if mortars.iter().any(|m| m.name == req.name) {
@@ -313,12 +312,11 @@ pub async fn add_mortar(
         req.elevation,
         req.x,
         req.y,
-        ammo_type,
     ));
 
     Ok(Json(SuccessResponse {
         success: true,
-        message: format!("Mortar '{}' added with {}", req.name, ammo_type),
+        message: format!("Mortar '{}' added", req.name),
     }))
 }
 
@@ -345,9 +343,9 @@ pub async fn delete_mortar(
     }
 }
 
-pub async fn update_mortar_ammo(
+pub async fn update_target_ammo(
     State(state): State<Arc<AppState>>,
-    Json(req): Json<UpdateMortarAmmoRequest>,
+    Json(req): Json<UpdateTargetAmmoRequest>,
 ) -> Result<Json<SuccessResponse>, (StatusCode, Json<ErrorResponse>)> {
     let ammo_type = match AmmoKind::parse_str(&req.ammo_type) {
         Some(a) => a,
@@ -361,18 +359,18 @@ pub async fn update_mortar_ammo(
         }
     };
 
-    let mut mortars = state.mortars.write().await;
-    if let Some(mortar) = mortars.iter_mut().find(|m| m.name == req.name) {
-        mortar.ammo_type = ammo_type;
+    let mut targets = state.targets.write().await;
+    if let Some(target) = targets.iter_mut().find(|t| t.name == req.name) {
+        target.ammo_type = ammo_type;
         Ok(Json(SuccessResponse {
             success: true,
-            message: format!("Mortar '{}' ammo set to {}", req.name, ammo_type),
+            message: format!("Target '{}' ammo set to {}", req.name, ammo_type),
         }))
     } else {
         Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
-                error: format!("Mortar '{}' not found", req.name),
+                error: format!("Target '{}' not found", req.name),
             }),
         ))
     }
@@ -399,6 +397,7 @@ pub async fn add_target(
     }
 
     let target_type = TargetType::parse_str(&req.target_type).unwrap_or(TargetType::Infanterie);
+    let ammo_type = AmmoKind::parse_str(&req.ammo_type).unwrap_or(AmmoKind::He);
     let mut targets = state.targets.write().await;
 
     if targets.iter().any(|t| t.name == req.name) {
@@ -416,6 +415,7 @@ pub async fn add_target(
         req.x,
         req.y,
         target_type,
+        ammo_type,
     ));
 
     Ok(Json(SuccessResponse {

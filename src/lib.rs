@@ -23,8 +23,8 @@
 //! let dispersions = load_dispersion().unwrap();
 //!
 //! // Définir les positions
-//! let mortar = MortarPosition::new("M1".to_string(), 100.0, 0.0, 0.0, AmmoKind::He);
-//! let target = TargetPosition::new("T1".to_string(), 50.0, 500.0, 300.0, TargetType::Infanterie);
+//! let mortar = MortarPosition::new("M1".to_string(), 100.0, 0.0, 0.0);
+//! let target = TargetPosition::new("T1".to_string(), 50.0, 500.0, 300.0, TargetType::Infanterie, AmmoKind::He);
 //!
 //! // Calculer la solution de tir
 //! let solution = calculate_solution_with_dispersion(&mortar, &target, &ballistics, &dispersions);
@@ -348,10 +348,7 @@ impl Position {
     }
 }
 
-/// Position d'un mortier avec son type de munition chargée.
-///
-/// Étend la position de base avec le type de munition actuellement
-/// configuré pour le mortier.
+/// Position d'un mortier.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MortarPosition {
     /// Identifiant du mortier (ex: "M1", "Alpha")
@@ -362,40 +359,26 @@ pub struct MortarPosition {
     pub x: f64,
     /// Coordonnée Y en mètres
     pub y: f64,
-    /// Type de munition chargée
-    pub ammo_type: AmmoKind,
 }
 
 impl MortarPosition {
     /// Crée une nouvelle position de mortier.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - Identifiant du mortier
-    /// * `elevation` - Altitude en mètres
-    /// * `x` - Coordonnée X en mètres
-    /// * `y` - Coordonnée Y en mètres
-    /// * `ammo_type` - Type de munition chargée
-    pub fn new(name: String, elevation: f64, x: f64, y: f64, ammo_type: AmmoKind) -> Self {
+    pub fn new(name: String, elevation: f64, x: f64, y: f64) -> Self {
         MortarPosition {
             name,
             elevation,
             x,
             y,
-            ammo_type,
         }
     }
 
-    /// Convertit en position générique (perd l'information de munition).
+    /// Convertit en position générique.
     pub fn as_position(&self) -> Position {
         Position::new(self.name.clone(), self.elevation, self.x, self.y)
     }
 }
 
-/// Position d'une cible avec son type tactique.
-///
-/// Étend la position de base avec le type de cible pour
-/// déterminer la munition recommandée.
+/// Position d'une cible avec son type tactique et le type de munition à employer.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TargetPosition {
     /// Identifiant de la cible (ex: "T1", "Objectif Alpha")
@@ -408,6 +391,8 @@ pub struct TargetPosition {
     pub y: f64,
     /// Type tactique de la cible
     pub target_type: TargetType,
+    /// Type de munition à utiliser contre cette cible
+    pub ammo_type: AmmoKind,
 }
 
 impl TargetPosition {
@@ -420,17 +405,19 @@ impl TargetPosition {
     /// * `x` - Coordonnée X en mètres
     /// * `y` - Coordonnée Y en mètres
     /// * `target_type` - Type tactique de la cible
-    pub fn new(name: String, elevation: f64, x: f64, y: f64, target_type: TargetType) -> Self {
+    /// * `ammo_type` - Type de munition à employer
+    pub fn new(name: String, elevation: f64, x: f64, y: f64, target_type: TargetType, ammo_type: AmmoKind) -> Self {
         TargetPosition {
             name,
             elevation,
             x,
             y,
             target_type,
+            ammo_type,
         }
     }
 
-    /// Convertit en position générique (perd l'information de type).
+    /// Convertit en position générique.
     pub fn as_position(&self) -> Position {
         Position::new(self.name.clone(), self.elevation, self.x, self.y)
     }
@@ -891,8 +878,8 @@ pub fn calculate_solution_with_dispersion(
         dispersions.insert(kind.as_str().to_string(), ring_dispersions);
     }
 
-    // Selected solution based on mortar's ammo type
-    let selected_ammo = mortar.ammo_type;
+    // Selected solution based on target's ammo type
+    let selected_ammo = target.ammo_type;
     let mut selected_elevations: BTreeMap<String, Option<f64>> = BTreeMap::new();
     let mut selected_dispersions: BTreeMap<String, Option<f64>> = BTreeMap::new();
     for r in rings {
@@ -919,7 +906,7 @@ pub fn calculate_solution_with_dispersion(
         azimuth_deg,
         elevation_diff_m,
         signed_elevation_diff_m,
-        mortar_ammo: mortar.ammo_type.as_str().to_string(),
+        mortar_ammo: target.ammo_type.as_str().to_string(),
         target_type: target.target_type.as_str().to_string(),
         recommended_ammo: target.target_type.suggested_ammo().as_str().to_string(),
         solutions,
@@ -990,6 +977,7 @@ pub fn apply_correction(
         corrected_x,
         corrected_y,
         target.target_type,
+        target.ammo_type,
     )
 }
 
@@ -1070,6 +1058,7 @@ mod tests {
             500.0,
             300.0,
             TargetType::Infanterie,
+            AmmoKind::He,
         );
 
         let corrected = apply_correction(&t, -50.0, 30.0);
@@ -1100,8 +1089,8 @@ mod tests {
         let mut dispersions: DispersionTable = BTreeMap::new();
         dispersions.insert((AmmoKind::He, 2), 39.0);
 
-        let mortar = MortarPosition::new("M1".into(), 100.0, 0.0, 0.0, AmmoKind::He);
-        let target = TargetPosition::new("T1".into(), 50.0, 500.0, 300.0, TargetType::Infanterie);
+        let mortar = MortarPosition::new("M1".into(), 100.0, 0.0, 0.0);
+        let target = TargetPosition::new("T1".into(), 50.0, 500.0, 300.0, TargetType::Infanterie, AmmoKind::He);
 
         let sol = calculate_solution_with_dispersion(&mortar, &target, &ballistics, &dispersions);
 
