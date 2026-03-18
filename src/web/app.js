@@ -471,7 +471,7 @@ function displayResults(data, mortarName, targetName) {
 
     // Update metrics
     document.getElementById('distance').textContent = data.distance_m.toFixed(1);
-    document.getElementById('azimuth').textContent = data.azimuth_deg.toFixed(1);
+    document.getElementById('azimuth').textContent = data.azimuth_deg.toFixed(1) + " / " + data.azimuth_mils.toFixed(1);
     document.getElementById('elevation-diff').textContent = data.elevation_diff_m.toFixed(1);
 
     // Update type info

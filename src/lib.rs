@@ -239,6 +239,28 @@ impl std::fmt::Display for TargetType {
 // Structures géométriques
 // ============================================================================
 
+/// Unités de Mesures disponibles pour les Orientations
+///
+/// Chaque unité de mesure permet une précision et une compréhension différente
+/// Les degrés sont plus compréhensibles pour les personnels non formées
+/// Les radians sont plus précis et évitent des erreurs de tirs dû à l'imprécision des degrés
+/// Les mils permettent une transmission précise des Radians aux opérateurs mortier
+///
+/// # Variantes
+///
+/// - `Degrees` - Unité d'Orientation en Degrés
+/// - `Radians` - Unité d'Orientation en Radians
+/// - `Mils` - Unité d'Orientation en Mils
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum AzimuthUnit {
+    /// Unité en Degrés
+    Degrees,
+    /// Unité en Radians
+    Radians,
+    /// Unité en Mils
+    Mils,
+}
+
 /// Position générique dans un système de coordonnées 2D avec élévation.
 ///
 /// Utilisé comme base pour les positions de mortier et de cible.
@@ -319,32 +341,42 @@ impl Position {
 
     /// Calcule l'azimut vers une autre position.
     ///
-    /// L'azimut est mesuré en degrés dans le sens horaire depuis le Nord.
+    /// L'azimut est mesuré dans le sens horaire depuis le Nord.
     ///
     /// # Arguments
     ///
     /// * `other` - Position cible
+    /// * `unit` - Unité de sortie souhaitée (degrés, radians ou mils)
     ///
     /// # Retourne
     ///
-    /// Azimut en degrés (0-360).
+    /// Azimut selon l'unité spécifiée (0-360° ou 0-2π ou 0-6400 mils).
     ///
     /// # Exemple
     ///
     /// ```
     /// use mortar::Position;
+    /// use mortar::AzimuthUnit;
     /// let p1 = Position::new("A".to_string(), 0.0, 0.0, 0.0);
     /// let p2 = Position::new("B".to_string(), 0.0, 100.0, 0.0); // Est
-    /// assert!((p1.azimuth_to(&p2) - 90.0).abs() < 0.01);
+    /// assert!((p1.azimuth_to(&p2, AzimuthUnit::Degrees) - 90.0).abs() < 0.01);
+    /// assert!((p1.azimuth_to(&p2, AzimuthUnit::Radians) - std::f64::consts::FRAC_PI_2).abs() < 0.01);
+    /// assert!((p1.azimuth_to(&p2, AzimuthUnit::Mils) - 1600.0).abs() < 0.01);
     /// ```
-    pub fn azimuth_to(&self, other: &Position) -> f64 {
+    pub fn azimuth_to(&self, other: &Position, unit: AzimuthUnit) -> f64 {
         let dy = other.y - self.y;
         let dx = other.x - self.x;
-        let mut azimuth = dx.atan2(dy).to_degrees();
-        if azimuth < 0.0 {
-            azimuth += 360.0;
+
+        let mut azimuth_rad = dx.atan2(dy);
+        if azimuth_rad < 0.0 {
+            azimuth_rad += 2.0 * std::f64::consts::PI; // 2π pour rester dans [0, 2π]
         }
-        azimuth
+
+        match unit {
+            AzimuthUnit::Degrees => azimuth_rad.to_degrees(),
+            AzimuthUnit::Radians => azimuth_rad,
+            AzimuthUnit::Mils => (azimuth_rad.to_degrees() / 360.0) * 6400.0, // 6400 mils = 360°
+        }
     }
 }
 
@@ -773,6 +805,10 @@ pub struct FiringSolution {
     pub distance_m: f64,
     /// Azimut en degrés (0-360, depuis le Nord)
     pub azimuth_deg: f64,
+    /// Azimuth en radians (0-2π, depuis le Nord)
+    pub azimuth_rad: f64,
+    /// Azimuth en mils (0-6400, depuis le Nord)
+    pub azimuth_mils: f64,
     /// Différence d'élévation absolue en mètres
     pub elevation_diff_m: f64,
     /// Différence d'élévation signée (mortier - cible, positif = mortier plus haut)
@@ -856,7 +892,9 @@ pub fn calculate_solution_with_dispersion(
     let target_pos = target.as_position();
 
     let distance_m = mortar_pos.distance_to(&target_pos);
-    let azimuth_deg = mortar_pos.azimuth_to(&target_pos);
+    let azimuth_deg = mortar_pos.azimuth_to(&target_pos, AzimuthUnit::Degrees);
+    let azimuth_rad = mortar_pos.azimuth_to(&target_pos, AzimuthUnit::Radians);
+    let azimuth_mils = mortar_pos.azimuth_to(&target_pos, AzimuthUnit::Mils);
     let elevation_diff_m = mortar_pos.elevation_difference(&target_pos);
     let signed_elevation_diff_m = mortar.elevation - target.elevation;
 
@@ -911,6 +949,8 @@ pub fn calculate_solution_with_dispersion(
     FiringSolution {
         distance_m,
         azimuth_deg,
+        azimuth_rad,
+        azimuth_mils,
         elevation_diff_m,
         signed_elevation_diff_m,
         mortar_ammo: target.ammo_type.as_str().to_string(),
@@ -1021,8 +1061,15 @@ mod tests {
         assert_eq!(p1.distance_to(&p2), 500.0);
 
         let east = Position::new("E".to_string(), 0.0, 100.0, 0.0);
-        let az = p1.azimuth_to(&east);
-        assert!((az - 90.0).abs() < 0.01);
+        let az_deg = p1.azimuth_to(&east, AzimuthUnit::Degrees);
+        assert!((az_deg - 90.0).abs() < 0.01);
+
+        let p3 = Position::new("C".to_string(), 0.0, 100.0, 0.0);
+        let az_rad = p3.azimuth_to(&p1, AzimuthUnit::Radians);
+        assert!((az_rad - 3.0 * std::f64::consts::PI / 2.0).abs() < 0.01);
+
+        let az_mils = p3.azimuth_to(&p1, AzimuthUnit::Mils);
+        assert!((az_mils - 4800.0).abs() < 0.01);
     }
 
     #[test]

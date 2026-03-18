@@ -318,7 +318,10 @@ pub async fn calc_and_print(state: &Arc<AppState>, mortar_name: &str, target_nam
             println!("=== SOLUTION DE TIR: {} -> {} ===", m.name, t.name);
             println!();
             println!("  Distance:       {:.1} m", solution.distance_m);
-            println!("  Azimut:         {:.1} deg", solution.azimuth_deg);
+            println!(
+                "  Azimut:         {:.1} deg / {:1} mils",
+                solution.azimuth_deg, solution.azimuth_mils
+            );
             println!(
                 "  Diff Elevation: {:.1} m (signe: {:+.1} m)",
                 solution.elevation_diff_m, solution.signed_elevation_diff_m
