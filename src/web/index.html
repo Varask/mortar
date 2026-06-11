@@ -3,221 +3,266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mortar Calculator</title>
+    <title>MORTAR // Fire Direction Center</title>
+    <meta name="description" content="Calculateur balistique mortier 60mm — solutions de tir, dispersion, correction.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235cff8f' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cline x1='12' y1='1' x2='12' y2='6'/%3E%3Cline x1='12' y1='18' x2='12' y2='23'/%3E%3Cline x1='1' y1='12' x2='6' y2='12'/%3E%3Cline x1='18' y1='12' x2='23' y2='12'/%3E%3C/svg%3E">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Calculateur de Solution de Tir</h1>
-            <p class="subtitle">Systeme Mortar 60mm</p>
-        </header>
+    <div class="scanlines" aria-hidden="true"></div>
 
-        <main>
-            <div class="panels">
-                <!-- Left Panel: Mortars -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2>Mortiers</h2>
-                    </div>
+    <header class="topbar">
+        <div class="brand">
+            <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/>
+                <circle cx="12" cy="12" r="3"/>
+                <line x1="12" y1="1" x2="12" y2="6"/>
+                <line x1="12" y1="18" x2="12" y2="23"/>
+                <line x1="1" y1="12" x2="6" y2="12"/>
+                <line x1="18" y1="12" x2="23" y2="12"/>
+            </svg>
+            <div class="brand-text">
+                <h1>MORTAR</h1>
+                <span class="brand-sub">Fire Direction Center — 60mm</span>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <div class="sys-status" id="sys-status" title="État du serveur">
+                <span class="status-dot" id="status-dot"></span>
+                <span class="status-label" id="status-label">LIAISON…</span>
+            </div>
+            <div class="zulu-clock" id="zulu-clock" title="Heure Zulu (UTC)">--:--:--Z</div>
+        </div>
+    </header>
 
-                    <div class="list-container">
-                        <ul id="mortars-list" class="position-list">
-                            <li class="empty-message">Aucun mortier</li>
-                        </ul>
-                    </div>
-
-                    <div class="form-group compact">
-                        <h3>Ajouter Mortier</h3>
-                        <div class="form-row">
-                            <label for="mortar-name">Nom</label>
-                            <input type="text" id="mortar-name" placeholder="M1">
-                        </div>
-                        <div class="form-row">
-                            <label for="mortar-elevation">Elev (m)</label>
-                            <input type="number" id="mortar-elevation" value="0" step="0.1">
-                        </div>
-                        <div class="form-row">
-                            <label for="mortar-x">X (m)</label>
-                            <input type="number" id="mortar-x" value="0" step="1">
-                        </div>
-                        <div class="form-row">
-                            <label for="mortar-y">Y (m)</label>
-                            <input type="number" id="mortar-y" value="0" step="1">
-                        </div>
-                        <button id="add-mortar-btn" class="btn btn-add">Ajouter</button>
-                    </div>
+    <main class="layout">
+        <!-- ===== Colonne gauche : unités ===== -->
+        <aside class="col col-units">
+            <section class="panel" aria-labelledby="mortars-title">
+                <div class="panel-header">
+                    <h2 id="mortars-title">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 L20 19 L4 19 Z"/></svg>
+                        Mortiers
+                    </h2>
+                    <span class="count-badge" id="mortars-count">0</span>
                 </div>
-
-                <!-- Right Panel: Targets -->
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2>Cibles</h2>
+                <ul id="mortars-list" class="unit-list">
+                    <li class="empty-message">Aucun mortier déployé</li>
+                </ul>
+                <details class="add-form" open>
+                    <summary>+ Déployer un mortier</summary>
+                    <div class="form-grid">
+                        <label>Nom
+                            <input type="text" id="mortar-name" placeholder="M1" autocomplete="off">
+                        </label>
+                        <label>Élév. (m)
+                            <input type="number" id="mortar-elevation" value="0" step="0.1">
+                        </label>
+                        <label>X (m)
+                            <input type="number" id="mortar-x" value="0" step="1">
+                        </label>
+                        <label>Y (m)
+                            <input type="number" id="mortar-y" value="0" step="1">
+                        </label>
                     </div>
+                    <button id="add-mortar-btn" class="btn btn-mortar">Déployer</button>
+                </details>
+            </section>
 
-                    <div class="list-container">
-                        <ul id="targets-list" class="position-list">
-                            <li class="empty-message">Aucune cible</li>
-                        </ul>
-                    </div>
-
-                    <div class="form-group compact">
-                        <h3>Ajouter Cible</h3>
-                        <div class="form-row">
-                            <label for="target-name">Nom</label>
-                            <input type="text" id="target-name" placeholder="T1">
-                        </div>
-                        <div class="form-row">
-                            <label for="target-elevation">Elev (m)</label>
+            <section class="panel" aria-labelledby="targets-title">
+                <div class="panel-header">
+                    <h2 id="targets-title">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4 L20 12 L12 20 L4 12 Z"/></svg>
+                        Cibles
+                    </h2>
+                    <span class="count-badge danger" id="targets-count">0</span>
+                </div>
+                <ul id="targets-list" class="unit-list">
+                    <li class="empty-message">Aucune cible désignée</li>
+                </ul>
+                <details class="add-form" open>
+                    <summary>+ Désigner une cible</summary>
+                    <div class="form-grid">
+                        <label>Nom
+                            <input type="text" id="target-name" placeholder="T1" autocomplete="off">
+                        </label>
+                        <label>Élév. (m)
                             <input type="number" id="target-elevation" value="0" step="0.1">
-                        </div>
-                        <div class="form-row">
-                            <label for="target-x">X (m)</label>
+                        </label>
+                        <label>X (m)
                             <input type="number" id="target-x" value="0" step="1">
-                        </div>
-                        <div class="form-row">
-                            <label for="target-y">Y (m)</label>
+                        </label>
+                        <label>Y (m)
                             <input type="number" id="target-y" value="0" step="1">
-                        </div>
-                        <div class="form-row">
-                            <label for="target-type">Type</label>
+                        </label>
+                        <label>Type
                             <select id="target-type">
                                 <option value="INFANTERIE" selected>Infanterie</option>
-                                <option value="VEHICULE">Vehicule</option>
+                                <option value="VEHICULE">Véhicule</option>
                                 <option value="SOUTIEN">Soutien</option>
                             </select>
-                        </div>
-                        <div class="form-row">
-                            <label for="target-ammo">Ogive</label>
+                        </label>
+                        <label>Ogive
                             <select id="target-ammo">
                                 <option value="HE" selected>HE</option>
                                 <option value="PRACTICE">PRACTICE</option>
                                 <option value="SMOKE">SMOKE</option>
                                 <option value="FLARE">FLARE</option>
                             </select>
-                        </div>
-                        <button id="add-target-btn" class="btn btn-add">Ajouter</button>
+                        </label>
                     </div>
-                </div>
-            </div>
-
-            <!-- Selection and Calculate -->
-            <div class="selection-section">
-                <div class="selection-row">
-                    <div class="selection-item">
-                        <label for="selected-mortar">Mortier:</label>
-                        <select id="selected-mortar">
-                            <option value="">-- Selectionner --</option>
-                        </select>
-                    </div>
-                    <div class="selection-arrow">-></div>
-                    <div class="selection-item">
-                        <label for="selected-target">Cible:</label>
-                        <select id="selected-target">
-                            <option value="">-- Selectionner --</option>
-                        </select>
-                    </div>
-                </div>
-                <button id="calculate-btn" class="calculate-btn">Calculer Solution</button>
-            </div>
-
-            <!-- Results -->
-            <div id="results" class="results hidden">
-                <h2>Solution de Tir</h2>
-
-                <div class="solution-header">
-                    <span id="solution-mortar">--</span>
-                    <span class="arrow">-></span>
-                    <span id="solution-target">--</span>
-                </div>
-
-                <div class="metrics">
-                    <div class="metric">
-                        <span class="metric-label">Distance</span>
-                        <span id="distance" class="metric-value">--</span>
-                        <span class="metric-unit">m</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Azimut</span>
-                        <span id="azimuth" class="metric-value">--</span>
-                        <span class="metric-unit">deg / mils</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Diff. Elevation</span>
-                        <span id="elevation-diff" class="metric-value">--</span>
-                        <span class="metric-unit">m</span>
-                    </div>
-                </div>
-
-                <div class="type-info">
-                    <div class="type-item">
-                        <span class="type-label">Ogive:</span>
-                        <span id="mortar-ammo-display" class="type-value badge badge-ammo">--</span>
-                    </div>
-                    <div class="type-item">
-                        <span class="type-label">Type cible:</span>
-                        <span id="target-type-display" class="type-value badge badge-target">--</span>
-                    </div>
-                    <div class="type-item">
-                        <span class="type-label">Ogive suggeree:</span>
-                        <span id="recommended-ammo" class="type-value badge badge-recommended">--</span>
-                    </div>
-                </div>
-
-                <!-- Selected Solution (highlighted) -->
-                <div id="selected-solution" class="selected-solution">
-                    <h3>Elevation <span id="selected-ammo-type">--</span></h3>
-                    <div class="elevation-cards" id="elevation-cards">
-                    </div>
-                </div>
-
-                <!-- Correction Form -->
-                <div class="correction-section">
-                    <h3>Correction de Tir</h3>
-                    <p class="correction-help">Si l'obus a devie, entrez la deviation observee:</p>
-                    <div class="correction-inputs">
-                        <div class="correction-input">
-                            <label for="correction-vertical">Vertical (m)</label>
-                            <input type="number" id="correction-vertical" value="0" step="1">
-                            <span class="input-hint">Nord(-) / Sud(+)</span>
-                        </div>
-                        <div class="correction-input">
-                            <label for="correction-horizontal">Horizontal (m)</label>
-                            <input type="number" id="correction-horizontal" value="0" step="1">
-                            <span class="input-hint">Ouest(-) / Est(+)</span>
-                        </div>
-                    </div>
-                    <button id="apply-correction-btn" class="btn btn-correct">Appliquer Correction</button>
-                </div>
-
-                <details class="all-solutions">
-                    <summary>Voir toutes les elevations</summary>
-                    <div class="table-container">
-                        <table id="solutions-table">
-                            <thead>
-                                <tr>
-                                    <th>Type</th>
-                                    <th>0R</th>
-                                    <th>1R</th>
-                                    <th>2R</th>
-                                    <th>3R</th>
-                                    <th>4R</th>
-                                </tr>
-                            </thead>
-                            <tbody id="solutions-body">
-                            </tbody>
-                        </table>
-                    </div>
+                    <button id="add-target-btn" class="btn btn-target">Désigner</button>
                 </details>
+            </section>
+        </aside>
+
+        <!-- ===== Centre : carte tactique ===== -->
+        <section class="col col-map panel" aria-label="Carte tactique">
+            <div class="panel-header">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6 L9 3 L15 6 L21 3 L21 18 L15 21 L9 18 L3 21 Z"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+                    Carte tactique
+                </h2>
+                <div class="map-tools">
+                    <span class="map-scale" id="map-scale">—</span>
+                </div>
             </div>
+            <div class="map-wrap">
+                <canvas id="tactical-map"></canvas>
+                <div class="map-legend">
+                    <span><i class="legend-swatch swatch-mortar"></i>Mortier</span>
+                    <span><i class="legend-swatch swatch-target"></i>Cible</span>
+                    <span><i class="legend-swatch swatch-disp"></i>Dispersion</span>
+                </div>
+                <div class="map-hint">Clic : sélectionner l'unité la plus proche · Double-clic : pré-remplir X/Y</div>
+            </div>
+        </section>
 
-            <div id="error" class="error hidden"></div>
-        </main>
+        <!-- ===== Colonne droite : mission de tir ===== -->
+        <aside class="col col-mission">
+            <section class="panel panel-mission" aria-labelledby="mission-title">
+                <div class="panel-header">
+                    <h2 id="mission-title">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1" fill="currentColor"/><line x1="12" y1="3" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="21"/><line x1="3" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="21" y2="12"/></svg>
+                        Mission de tir
+                    </h2>
+                </div>
 
-        <footer>
-            <p>Mortar Calculator v0.1.0 | CLI: tapez 'help' dans le terminal</p>
-        </footer>
-    </div>
+                <div class="mission-select">
+                    <label>Mortier
+                        <select id="selected-mortar">
+                            <option value="">— Sélectionner —</option>
+                        </select>
+                    </label>
+                    <div class="mission-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+                    </div>
+                    <label>Cible
+                        <select id="selected-target">
+                            <option value="">— Sélectionner —</option>
+                        </select>
+                    </label>
+                </div>
+
+                <button id="calculate-btn" class="calculate-btn">
+                    <span class="btn-label">Calculer la solution</span>
+                </button>
+
+                <div id="error" class="error hidden" role="alert"></div>
+
+                <div id="results" class="results hidden">
+                    <div class="solution-header">
+                        <span id="solution-mortar" class="tag tag-mortar">--</span>
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>
+                        <span id="solution-target" class="tag tag-target">--</span>
+                    </div>
+
+                    <div class="solution-core">
+                        <div class="compass" aria-hidden="true">
+                            <svg viewBox="0 0 120 120" id="compass-svg">
+                                <circle cx="60" cy="60" r="54" class="compass-ring"/>
+                                <circle cx="60" cy="60" r="44" class="compass-ring faint"/>
+                                <g class="compass-ticks" id="compass-ticks"></g>
+                                <text x="60" y="16" class="compass-card">N</text>
+                                <text x="106" y="64" class="compass-card">E</text>
+                                <text x="60" y="112" class="compass-card">S</text>
+                                <text x="14" y="64" class="compass-card">O</text>
+                                <g id="compass-needle" class="compass-needle">
+                                    <polygon points="60,14 64,60 60,68 56,60" />
+                                </g>
+                                <circle cx="60" cy="60" r="3" class="compass-hub"/>
+                            </svg>
+                        </div>
+                        <div class="metrics">
+                            <div class="metric">
+                                <span class="metric-label">Distance</span>
+                                <span id="distance" class="metric-value">--</span>
+                                <span class="metric-unit">m</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Azimut</span>
+                                <span id="azimuth" class="metric-value">--</span>
+                                <span class="metric-unit">deg / mils</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Δ Élévation</span>
+                                <span id="elevation-diff" class="metric-value">--</span>
+                                <span class="metric-unit">m</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="type-info">
+                        <span class="badge badge-ammo" id="mortar-ammo-display">--</span>
+                        <span class="badge badge-target" id="target-type-display">--</span>
+                        <span class="badge badge-recommended" id="recommended-ammo" title="Ogive suggérée">--</span>
+                    </div>
+
+                    <div class="selected-solution">
+                        <h3>Élévation <span id="selected-ammo-type" class="accent">--</span> <small>(mils — cliquez un anneau pour voir sa dispersion sur la carte)</small></h3>
+                        <div class="elevation-cards" id="elevation-cards"></div>
+                    </div>
+
+                    <details class="all-solutions">
+                        <summary>Toutes les tables</summary>
+                        <div class="table-container">
+                            <table id="solutions-table">
+                                <thead>
+                                    <tr><th>Type</th><th>0R</th><th>1R</th><th>2R</th><th>3R</th><th>4R</th></tr>
+                                </thead>
+                                <tbody id="solutions-body"></tbody>
+                            </table>
+                        </div>
+                    </details>
+
+                    <div class="correction-section">
+                        <h3>Correction de tir</h3>
+                        <p class="correction-help">Déviation observée de l'impact :</p>
+                        <div class="correction-inputs">
+                            <label>Vertical (m)
+                                <input type="number" id="correction-vertical" value="0" step="1">
+                                <span class="input-hint">Nord(−) / Sud(+)</span>
+                            </label>
+                            <label>Horizontal (m)
+                                <input type="number" id="correction-horizontal" value="0" step="1">
+                                <span class="input-hint">Ouest(−) / Est(+)</span>
+                            </label>
+                        </div>
+                        <button id="apply-correction-btn" class="btn btn-correct">Appliquer la correction</button>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </main>
+
+    <footer class="footer">
+        <span>MORTAR v0.1.0 — CLI disponible : tapez <code>help</code> dans le terminal</span>
+    </footer>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
     <script src="app.js"></script>
 </body>

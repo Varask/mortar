@@ -50,6 +50,14 @@ Acceder a `http://localhost:3000` apres le lancement du serveur.
 3. Selectionner mortier et cible
 4. Cliquer sur "Calculer Solution"
 
+#### Prévisualisation UI sans Rust
+
+Pour travailler sur l'interface web sans compiler le backend (l'API est stubbée avec des données d'exemple) :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\dev-preview.ps1 -Port 4173
+```
+
 ### Interface CLI
 
 Le serveur expose egalement une interface CLI interactive :
