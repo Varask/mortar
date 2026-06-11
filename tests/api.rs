@@ -169,15 +169,15 @@ async fn web_assets_are_served() {
 
     // Strong assertions matching your current src/web/index.html
     assert!(
-        html.contains("<title>Mortar Calculator</title>"),
+        html.contains("<title>MORTAR // Fire Direction Center</title>"),
         "index.html should contain the expected <title>"
     );
     assert!(
-        html.contains("<h1>Calculateur de Solution de Tir</h1>"),
+        html.contains("<h1>MORTAR</h1>"),
         "index.html should contain the expected <h1>"
     );
     assert!(
-        html.contains("<p class=\"subtitle\">Systeme Mortar 60mm</p>"),
+        html.contains("Fire Direction Center — 60mm"),
         "index.html should contain the expected subtitle"
     );
 
