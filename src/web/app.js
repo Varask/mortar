@@ -11,6 +11,9 @@ let activeRing = null;        // anneau sélectionné pour la dispersion sur car
 let mapAnimT = 0;             // phase d'animation de la ligne de tir
 
 const RINGS = ['0R', '1R', '2R', '3R', '4R'];
+// L'API sérialise les enums en casse mixte ("Infanterie", "He") dans les
+// listes mais en majuscules dans /api/calculate — on normalise partout.
+const norm = (s) => String(s || '').toUpperCase();
 const AMMO_TYPES = ['PRACTICE', 'HE', 'SMOKE', 'FLARE'];
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -406,15 +409,15 @@ function renderTargetsList() {
             </div>
             <div class="item-actions">
                 <select class="type-select" aria-label="Type de ${target.name}">
-                    <option value="INFANTERIE" ${target.target_type === 'INFANTERIE' ? 'selected' : ''}>INF</option>
-                    <option value="VEHICULE" ${target.target_type === 'VEHICULE' ? 'selected' : ''}>VEH</option>
-                    <option value="SOUTIEN" ${target.target_type === 'SOUTIEN' ? 'selected' : ''}>SOU</option>
+                    <option value="INFANTERIE" ${norm(target.target_type) === 'INFANTERIE' ? 'selected' : ''}>INF</option>
+                    <option value="VEHICULE" ${norm(target.target_type) === 'VEHICULE' ? 'selected' : ''}>VEH</option>
+                    <option value="SOUTIEN" ${norm(target.target_type) === 'SOUTIEN' ? 'selected' : ''}>SOU</option>
                 </select>
                 <select class="ammo-select" aria-label="Ogive de ${target.name}">
-                    <option value="HE" ${target.ammo_type === 'HE' ? 'selected' : ''}>HE</option>
-                    <option value="PRACTICE" ${target.ammo_type === 'PRACTICE' ? 'selected' : ''}>PRAC</option>
-                    <option value="SMOKE" ${target.ammo_type === 'SMOKE' ? 'selected' : ''}>SMK</option>
-                    <option value="FLARE" ${target.ammo_type === 'FLARE' ? 'selected' : ''}>FLR</option>
+                    <option value="HE" ${norm(target.ammo_type) === 'HE' ? 'selected' : ''}>HE</option>
+                    <option value="PRACTICE" ${norm(target.ammo_type) === 'PRACTICE' ? 'selected' : ''}>PRAC</option>
+                    <option value="SMOKE" ${norm(target.ammo_type) === 'SMOKE' ? 'selected' : ''}>SMK</option>
+                    <option value="FLARE" ${norm(target.ammo_type) === 'FLARE' ? 'selected' : ''}>FLR</option>
                 </select>
                 <button class="btn-delete" aria-label="Supprimer ${target.name}">✕</button>
             </div>
@@ -473,7 +476,7 @@ function updateTargetsDropdown() {
     for (const target of targets) {
         const option = document.createElement('option');
         option.value = target.name;
-        option.textContent = `${target.name} [${target.target_type}] [${target.ammo_type}]`;
+        option.textContent = `${target.name} [${norm(target.target_type)}] [${norm(target.ammo_type)}]`;
         select.appendChild(option);
     }
 
